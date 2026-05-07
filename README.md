@@ -38,7 +38,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.0.3.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.0.4.jar`.
 
 ## Commands
 

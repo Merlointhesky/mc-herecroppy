@@ -126,7 +126,16 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private boolean processCurrentBlock(Location loc) {
-        // 1. Try to find and harvest a ripe crop
+        // Determine ground and above blocks, handling path points at crop Y-level
+        Block ground = loc.getBlock();
+        Block above = loc.clone().add(0, 1, 0).getBlock();
+
+        if (!isFarmGround(ground)) {
+            ground = loc.clone().subtract(0, 1, 0).getBlock();
+            above = loc.getBlock();
+        }
+
+        // 1. Is there a crop? Check ripeness / bonemeal
         Block cropBlock = findCropBlock(loc);
         if (cropBlock != null && isCrop(cropBlock)) {
             if (cropBlock.getBlockData() instanceof Ageable ageable) {
@@ -149,27 +158,24 @@ public class FarmTask extends BukkitRunnable {
             return false;
         }
 
-        // Determine ground block, handling path points at crop Y-level
-        Block ground = loc.getBlock();
-        Block above = loc.clone().add(0, 1, 0).getBlock();
+        boolean didSomething = false;
 
-        if (!isFarmGround(ground)) {
-            ground = loc.clone().subtract(0, 1, 0).getBlock();
-            above = loc.getBlock();
+        // 2. Is it prepared? If not, till it
+        if (isTillable(ground) && above.getType().isAir()) {
+            if (tryTill(ground)) {
+                didSomething = true;
+            }
         }
 
-        // 2. Plant on empty farmland or soul sand
+        // 3. Is it seeded? If not, plant
         if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
                 && above.getType().isAir()) {
-            return tryPlant(ground, above);
+            if (tryPlant(ground, above)) {
+                didSomething = true;
+            }
         }
 
-        // 3. Till dirt into farmland
-        if (isTillable(ground) && above.getType().isAir()) {
-            return tryTill(ground);
-        }
-
-        return false;
+        return didSomething;
     }
 
     private Block findCropBlock(Location loc) {
