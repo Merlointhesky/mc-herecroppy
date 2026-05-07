@@ -9,6 +9,8 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 - **Snake-pattern path** — Automatically traverses the selected area in an efficient snake-like pattern.
 - **Ripe crop detection** — Detects and harvests fully grown crops (Wheat, Carrots, Potatoes, Beetroots, Nether Wart).
 - **Automatic replanting** — Replants crops immediately after harvesting using seeds from your inventory.
+- **Auto-tilling** — If your selected area contains untilled dirt or grass, the plugin uses your held hoe to prepare it into farmland.
+- **Auto-planting** — On empty farmland or soul sand, the plugin automatically plants the first available seeds from your inventory.
 - **Drop collection** — Automatically collects dropped items after breaking crops.
 - **Inventory full detection** — Automatically stops when your inventory is full.
 - **Offline cleanup** — Automatically removes players from auto-farming when they disconnect.
@@ -36,7 +38,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.0.1.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.0.2.jar`.
 
 ## Commands
 

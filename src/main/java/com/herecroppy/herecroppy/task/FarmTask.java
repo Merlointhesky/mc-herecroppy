@@ -10,6 +10,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -125,52 +126,37 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private boolean processCurrentBlock(Location loc) {
+        // 1. Try to find and harvest a ripe crop
         Block cropBlock = findCropBlock(loc);
-        if (cropBlock == null) {
+        if (cropBlock != null && isCrop(cropBlock)) {
+            if (cropBlock.getBlockData() instanceof Ageable ageable) {
+                if (ageable.getAge() == ageable.getMaximumAge()) {
+                    return harvestCrop(cropBlock);
+                }
+            }
             return false;
         }
 
-        if (cropBlock.getBlockData() instanceof Ageable ageable) {
-            if (ageable.getAge() == ageable.getMaximumAge()) {
-                Material cropType = cropBlock.getType();
+        // Determine ground block, handling path points at crop Y-level
+        Block ground = loc.getBlock();
+        Block above = loc.clone().add(0, 1, 0).getBlock();
 
-                // Award AuraSkills XP
-                auraSkillsHelper.addFarmingXp(player, BASE_HARVEST_XP);
-
-                // Apply fortune/double drops
-                int dropMultiplier = calculateDropMultiplier();
-
-                // Break and collect
-                ItemStack tool = new ItemStack(Material.IRON_HOE);
-                cropBlock.breakNaturally(tool);
-
-                // Add extra fortune drops directly to inventory
-                if (dropMultiplier > 1) {
-                    Material product = cropProductMap.get(cropType);
-                    if (product != null) {
-                        player.getInventory().addItem(new ItemStack(product, dropMultiplier - 1));
-                    }
-                }
-
-                // Replant
-                Material seedType = seedMap.get(cropType);
-                if (seedType != null && hasItem(seedType)) {
-                    removeOneItem(seedType);
-                    cropBlock.setType(cropType);
-                    if (cropBlock.getBlockData() instanceof Ageable newAgeable) {
-                        newAgeable.setAge(0);
-                        cropBlock.setBlockData(newAgeable);
-                    }
-                }
-
-                // Send message
-                player.sendMessage(Component.text("Here Crop! We got ")
-                        .color(NamedTextColor.GREEN)
-                        .append(Component.text(formatName(cropType.name())).color(NamedTextColor.YELLOW))
-                        .append(Component.text("!").color(NamedTextColor.GREEN)));
-                return true;
-            }
+        if (!isFarmGround(ground)) {
+            ground = loc.clone().subtract(0, 1, 0).getBlock();
+            above = loc.getBlock();
         }
+
+        // 2. Plant on empty farmland or soul sand
+        if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
+                && above.getType().isAir()) {
+            return tryPlant(ground, above);
+        }
+
+        // 3. Till dirt into farmland
+        if (isTillable(ground) && above.getType().isAir()) {
+            return tryTill(ground);
+        }
+
         return false;
     }
 
@@ -227,6 +213,118 @@ public class FarmTask extends BukkitRunnable {
             result.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
         }
         return result.toString();
+    }
+
+    private boolean harvestCrop(Block cropBlock) {
+        Material cropType = cropBlock.getType();
+
+        // Award AuraSkills XP
+        auraSkillsHelper.addFarmingXp(player, BASE_HARVEST_XP);
+
+        // Apply fortune/double drops
+        int dropMultiplier = calculateDropMultiplier();
+
+        // Break and collect
+        ItemStack tool = new ItemStack(Material.IRON_HOE);
+        cropBlock.breakNaturally(tool);
+
+        // Add extra fortune drops directly to inventory
+        if (dropMultiplier > 1) {
+            Material product = cropProductMap.get(cropType);
+            if (product != null) {
+                player.getInventory().addItem(new ItemStack(product, dropMultiplier - 1));
+            }
+        }
+
+        // Replant
+        Material seedType = seedMap.get(cropType);
+        if (seedType != null && hasItem(seedType)) {
+            removeOneItem(seedType);
+            cropBlock.setType(cropType);
+            if (cropBlock.getBlockData() instanceof Ageable newAgeable) {
+                newAgeable.setAge(0);
+                cropBlock.setBlockData(newAgeable);
+            }
+        }
+
+        // Send message
+        player.sendMessage(Component.text("Here Crop! We got ")
+                .color(NamedTextColor.GREEN)
+                .append(Component.text(formatName(cropType.name())).color(NamedTextColor.YELLOW))
+                .append(Component.text("!").color(NamedTextColor.GREEN)));
+        return true;
+    }
+
+    private boolean tryPlant(Block ground, Block above) {
+        boolean isSoulSand = ground.getType() == Material.SOUL_SAND;
+
+        Material[][] seedPriority = {
+                {Material.WHEAT_SEEDS, Material.WHEAT},
+                {Material.CARROT, Material.CARROTS},
+                {Material.POTATO, Material.POTATOES},
+                {Material.BEETROOT_SEEDS, Material.BEETROOTS},
+                {Material.NETHER_WART, Material.NETHER_WART}
+        };
+
+        for (Material[] pair : seedPriority) {
+            Material seedType = pair[0];
+            Material cropType = pair[1];
+
+            if (cropType == Material.NETHER_WART && !isSoulSand) continue;
+            if (cropType != Material.NETHER_WART && isSoulSand) continue;
+
+            if (hasItem(seedType)) {
+                removeOneItem(seedType);
+                above.setType(cropType);
+                if (above.getBlockData() instanceof Ageable ageable) {
+                    ageable.setAge(0);
+                    above.setBlockData(ageable);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean tryTill(Block ground) {
+        ItemStack hand = player.getInventory().getItemInMainHand();
+        if (!isHoe(hand.getType())) {
+            return false;
+        }
+
+        if (hand.getItemMeta() instanceof Damageable damageable) {
+            if (damageable.getDamage() + 1 >= hand.getType().getMaxDurability()) {
+                return false;
+            }
+        }
+
+        ground.setType(Material.FARMLAND);
+
+        if (hand.getItemMeta() instanceof Damageable damageable) {
+            damageable.setDamage(damageable.getDamage() + 1);
+            hand.setItemMeta(damageable);
+        }
+
+        return true;
+    }
+
+    private boolean isFarmGround(Block block) {
+        Material type = block.getType();
+        return type == Material.FARMLAND || type == Material.SOUL_SAND || isTillable(block);
+    }
+
+    private boolean isTillable(Block block) {
+        return switch (block.getType()) {
+            case DIRT, GRASS_BLOCK, COARSE_DIRT, PODZOL, MYCELIUM, ROOTED_DIRT -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isHoe(Material material) {
+        return switch (material) {
+            case WOODEN_HOE, STONE_HOE, IRON_HOE, GOLDEN_HOE, DIAMOND_HOE, NETHERITE_HOE -> true;
+            default -> false;
+        };
     }
 
 }
