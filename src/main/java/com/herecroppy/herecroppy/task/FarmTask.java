@@ -133,6 +133,18 @@ public class FarmTask extends BukkitRunnable {
                 if (ageable.getAge() == ageable.getMaximumAge()) {
                     return harvestCrop(cropBlock);
                 }
+
+                // Crop is not ripe — try bonemeal to speed it up
+                if (hasItem(Material.BONE_MEAL)) {
+                    removeOneItem(Material.BONE_MEAL);
+                    cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
+                    // Re-check after bonemeal
+                    if (cropBlock.getBlockData() instanceof Ageable after) {
+                        if (after.getAge() == after.getMaximumAge()) {
+                            return harvestCrop(cropBlock);
+                        }
+                    }
+                }
             }
             return false;
         }
