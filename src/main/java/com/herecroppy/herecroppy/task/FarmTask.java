@@ -2,6 +2,10 @@ package com.herecroppy.herecroppy.task;
 
 import com.herecroppy.herecroppy.HereCroppyPlugin;
 import com.herecroppy.herecroppy.auraskills.AuraSkillsHelper;
+import com.herecroppy.herecroppy.map.ScanManager;
+import com.herecroppy.herecroppy.map.ScanResult;
+import com.herecroppy.herecroppy.path.PathGenerator;
+import com.herecroppy.herecroppy.selection.SelectionManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
@@ -30,17 +34,25 @@ public class FarmTask extends BukkitRunnable {
     private final Player player;
     private final List<Location> path;
     private final AuraSkillsHelper auraSkillsHelper;
+    private final ScanManager scanManager;
+    private final SelectionManager selectionManager;
+    private ScanResult scanResult;
     private int currentIndex = 0;
     private int harvestPause = 0;
     private final Random random = new Random();
     private final Map<Material, Material> seedMap;
     private final Map<Material, Material> cropProductMap;
 
-    public FarmTask(HereCroppyPlugin plugin, Player player, List<Location> path, AuraSkillsHelper auraSkillsHelper) {
+    public FarmTask(HereCroppyPlugin plugin, Player player, List<Location> path,
+                    AuraSkillsHelper auraSkillsHelper, ScanManager scanManager,
+                    SelectionManager selectionManager, ScanResult scanResult) {
         this.plugin = plugin;
         this.player = player;
         this.path = path;
         this.auraSkillsHelper = auraSkillsHelper;
+        this.scanManager = scanManager;
+        this.selectionManager = selectionManager;
+        this.scanResult = scanResult;
 
         this.seedMap = new HashMap<>();
         seedMap.put(Material.WHEAT, Material.WHEAT_SEEDS);
@@ -61,6 +73,14 @@ public class FarmTask extends BukkitRunnable {
         return plugin;
     }
 
+    public int getCurrentIndex() {
+        return currentIndex;
+    }
+
+    public void setCurrentIndex(int currentIndex) {
+        this.currentIndex = currentIndex;
+    }
+
     @Override
     public void run() {
         if (!player.isOnline()) {
@@ -70,7 +90,9 @@ public class FarmTask extends BukkitRunnable {
 
         if (isInventoryFull()) {
             cancel();
-            player.sendMessage(Component.text("Inventory full! Auto-farm paused.")
+            FarmTaskManager manager = plugin.getFarmTaskManager();
+            manager.recordInventoryFullStop(player, currentIndex);
+            player.sendMessage(Component.text("Inventory full! Auto-farm paused. Use /herecroppy restart to resume.")
                     .color(NamedTextColor.RED));
             return;
         }
@@ -107,13 +129,22 @@ public class FarmTask extends BukkitRunnable {
             snap.setPitch(current.getPitch());
             snap.setYaw(current.getYaw());
             player.teleport(snap);
-            boolean harvested = processCurrentBlock(target);
-            if (harvested) {
-                harvestPause = HARVEST_PAUSE_TICKS;
+
+            int blockX = target.getBlockX();
+            int blockZ = target.getBlockZ();
+            if (scanResult != null && !scanResult.isFarmable(blockX, blockZ)) {
+                // Passable but not farmable: just walk through
+            } else {
+                boolean harvested = processCurrentBlock(target);
+                if (harvested) {
+                    harvestPause = HARVEST_PAUSE_TICKS;
+                }
             }
+
             currentIndex++;
             if (currentIndex >= path.size()) {
                 currentIndex = 0;
+                triggerRescan();
             }
         } else {
             // Move toward target using velocity
@@ -123,6 +154,22 @@ public class FarmTask extends BukkitRunnable {
             velocity.setY(0);
             player.setVelocity(velocity);
         }
+    }
+
+    private void triggerRescan() {
+        if (scanManager == null || selectionManager == null || !selectionManager.hasCompleteSelection(player.getUniqueId())) {
+            return;
+        }
+        Location pointA = selectionManager.getPointA(player.getUniqueId());
+        Location pointB = selectionManager.getPointB(player.getUniqueId());
+        scanManager.scanAreaAsync(player.getUniqueId(), pointA, pointB, result -> {
+            scanResult = result;
+            List<Location> newPath = PathGenerator.generateSafePath(result);
+            if (!newPath.isEmpty()) {
+                path.clear();
+                path.addAll(newPath);
+            }
+        });
     }
 
     private boolean processCurrentBlock(Location loc) {

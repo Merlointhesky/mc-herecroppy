@@ -1,5 +1,7 @@
 package com.herecroppy.herecroppy.listener;
 
+import com.herecroppy.herecroppy.map.ScanManager;
+import com.herecroppy.herecroppy.map.ScanResult;
 import com.herecroppy.herecroppy.selection.SelectionManager;
 import com.herecroppy.herecroppy.task.FarmTaskManager;
 import net.kyori.adventure.text.Component;
@@ -19,10 +21,12 @@ public class FarmListener implements Listener {
 
     private final SelectionManager selectionManager;
     private final FarmTaskManager farmTaskManager;
+    private final ScanManager scanManager;
 
-    public FarmListener(SelectionManager selectionManager, FarmTaskManager farmTaskManager) {
+    public FarmListener(SelectionManager selectionManager, FarmTaskManager farmTaskManager, ScanManager scanManager) {
         this.selectionManager = selectionManager;
         this.farmTaskManager = farmTaskManager;
+        this.scanManager = scanManager;
     }
 
     @EventHandler
@@ -51,9 +55,23 @@ public class FarmListener implements Listener {
             player.sendMessage(Component.text("Point B set at ")
                     .color(NamedTextColor.GREEN)
                     .append(Component.text(formatLocation(clicked)).color(NamedTextColor.YELLOW))
-                    .append(Component.text(". Use ").color(NamedTextColor.GREEN))
-                    .append(Component.text("/herecroppy start").color(NamedTextColor.YELLOW))
-                    .append(Component.text(" to begin.").color(NamedTextColor.GREEN)));
+                    .append(Component.text(". Scanning area...").color(NamedTextColor.GREEN)));
+
+            scanManager.scanAreaAsync(player.getUniqueId(),
+                    selectionManager.getPointA(player.getUniqueId()),
+                    selectionManager.getPointB(player.getUniqueId()),
+                    result -> {
+                        player.sendMessage(Component.text("Area mapped: ")
+                                .color(NamedTextColor.GREEN)
+                                .append(Component.text(result.getFarmableCount() + " farmable").color(NamedTextColor.YELLOW))
+                                .append(Component.text(", ").color(NamedTextColor.GREEN))
+                                .append(Component.text(result.getPassableCount() + " walkable").color(NamedTextColor.YELLOW))
+                                .append(Component.text(", ").color(NamedTextColor.GREEN))
+                                .append(Component.text(result.getObstructedCount() + " obstructed").color(NamedTextColor.YELLOW))
+                                .append(Component.text(". Ready to ").color(NamedTextColor.GREEN))
+                                .append(Component.text("/herecroppy start").color(NamedTextColor.YELLOW))
+                                .append(Component.text("!").color(NamedTextColor.GREEN)));
+                    });
         } else {
             selectionManager.clearSelection(player.getUniqueId());
             selectionManager.setPointA(player.getUniqueId(), clicked);
@@ -71,6 +89,7 @@ public class FarmListener implements Listener {
         Player player = event.getPlayer();
         farmTaskManager.stopTask(player);
         selectionManager.clearSelection(player.getUniqueId());
+        scanManager.clearScan(player.getUniqueId());
     }
 
     private boolean isHoe(Material material) {

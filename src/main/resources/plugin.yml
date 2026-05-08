@@ -1,5 +1,5 @@
 name: HereCroppy
-version: '1.0.4'
+version: '1.0.5'
 main: com.herecroppy.herecroppy.HereCroppyPlugin
 description: Auto-farming plugin for Paper servers
 api-version: '1.21'
@@ -9,7 +9,7 @@ softdepend: [AuraSkills]
 commands:
   herecroppy:
     description: Toggle auto-farming
-    usage: /herecroppy <start|stop|clear>
+    usage: /herecroppy <start|stop|restart|clear>
     permission: herecroppy.use
 
 permissions:
