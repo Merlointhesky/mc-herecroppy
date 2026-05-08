@@ -9,6 +9,28 @@ import java.util.List;
 
 public class PathGenerator {
 
+    public static int findClosestIndex(List<Location> path, Location target) {
+        if (path.isEmpty() || target == null) {
+            return 0;
+        }
+        int bestIndex = 0;
+        double bestDistSq = Double.MAX_VALUE;
+        for (int i = 0; i < path.size(); i++) {
+            Location loc = path.get(i);
+            if (loc.getWorld() != target.getWorld()) {
+                continue;
+            }
+            double dx = loc.getX() - target.getX();
+            double dz = loc.getZ() - target.getZ();
+            double distSq = dx * dx + dz * dz;
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }
+
     public static List<Location> generateSafePath(ScanResult scanResult) {
         List<Location> path = new ArrayList<>();
 

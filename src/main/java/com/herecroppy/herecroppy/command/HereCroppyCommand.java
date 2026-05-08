@@ -79,13 +79,17 @@ public class HereCroppyCommand implements CommandExecutor {
                 }
 
                 FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
+                int startIndex = PathGenerator.findClosestIndex(path, scanResult.getPointB());
+                task.setCurrentIndex(startIndex);
                 farmTaskManager.startTask(player, task);
                 farmTaskManager.clearLastStop(player);
 
                 player.sendMessage(Component.text("Auto-farming enabled! Walking ")
                         .color(NamedTextColor.GREEN)
                         .append(Component.text(String.valueOf(path.size())).color(NamedTextColor.YELLOW))
-                        .append(Component.text(" blocks.").color(NamedTextColor.GREEN)));
+                        .append(Component.text(" blocks from index ").color(NamedTextColor.GREEN))
+                        .append(Component.text(String.valueOf(startIndex + 1)).color(NamedTextColor.YELLOW))
+                        .append(Component.text(".").color(NamedTextColor.GREEN)));
             }
             case "stop" -> {
                 if (!farmTaskManager.isFarming(player)) {

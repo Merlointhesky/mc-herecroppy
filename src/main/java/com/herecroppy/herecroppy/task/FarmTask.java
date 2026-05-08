@@ -31,8 +31,10 @@ public class FarmTask extends BukkitRunnable {
 
     private static final double SPEED = 0.25;
     private static final double SNAP_DISTANCE = 0.3;
+    private static final double MAX_DIRECT_STEP_DISTANCE = 1.75;
     private static final double BASE_HARVEST_XP = 10.0;
     private static final int HARVEST_PAUSE_TICKS = 5;
+    private static final int STUCK_TICK_THRESHOLD = 12;
 
     private final HereCroppyPlugin plugin;
     private final Player player;
@@ -44,6 +46,9 @@ public class FarmTask extends BukkitRunnable {
     private int currentIndex = 0;
     private int harvestPause = 0;
     private Location previousVisitedTarget;
+    private int lastTargetIndex = -1;
+    private double lastHorizontalDist = Double.MAX_VALUE;
+    private int stuckTicks = 0;
     private final Random random = new Random();
     private final Map<Material, Material> seedMap;
     private final Map<Material, Material> cropProductMap;
@@ -129,13 +134,29 @@ public class FarmTask extends BukkitRunnable {
         double horizontalDist = Math.sqrt(dx * dx + dz * dz);
         tryOpenPassageAt(target);
 
+        if (currentIndex != lastTargetIndex) {
+            lastTargetIndex = currentIndex;
+            lastHorizontalDist = horizontalDist;
+            stuckTicks = 0;
+        } else {
+            if (horizontalDist >= lastHorizontalDist - 0.02) {
+                stuckTicks++;
+            } else {
+                stuckTicks = 0;
+            }
+            lastHorizontalDist = horizontalDist;
+        }
+
+        if (horizontalDist > MAX_DIRECT_STEP_DISTANCE || stuckTicks >= STUCK_TICK_THRESHOLD) {
+            // Recovery for blocked transitions (e.g., skipped obstructed cells or closed passage collisions).
+            teleportToTarget(current, target);
+            stuckTicks = 0;
+            return;
+        }
+
         if (horizontalDist < SNAP_DISTANCE) {
             // Arrived at target - process crop (keep current Y to avoid going underground)
-            Location snap = target.clone();
-            snap.setY(current.getY());
-            snap.setPitch(current.getPitch());
-            snap.setYaw(current.getYaw());
-            player.teleport(snap);
+            teleportToTarget(current, target);
 
             // Close passages behind us (only blocks this bot opened earlier).
             if (previousVisitedTarget != null) {
@@ -167,6 +188,14 @@ public class FarmTask extends BukkitRunnable {
             velocity.setY(0);
             player.setVelocity(velocity);
         }
+    }
+
+    private void teleportToTarget(Location current, Location target) {
+        Location snap = target.clone();
+        snap.setY(target.getY() + 1.0);
+        snap.setPitch(current.getPitch());
+        snap.setYaw(current.getYaw());
+        player.teleport(snap);
     }
 
     private void triggerRescan() {
