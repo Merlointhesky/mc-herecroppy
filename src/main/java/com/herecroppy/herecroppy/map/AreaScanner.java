@@ -51,9 +51,15 @@ public class AreaScanner {
             return new ColumnResult(BlockClassification.OBSTRUCTED, null);
         }
 
+        boolean hasDoorPassage = isOpenablePassage(above1.getType()) || isOpenablePassage(above2.getType());
+
         // Unsafe ground materials
         if (isUnsafeGround(groundType)) {
             return new ColumnResult(BlockClassification.OBSTRUCTED, null);
+        }
+
+        if (hasDoorPassage) {
+            return new ColumnResult(BlockClassification.DOOR, ground.getY());
         }
 
         // Farmable ground materials
@@ -61,8 +67,8 @@ public class AreaScanner {
             return new ColumnResult(BlockClassification.FARMABLE, ground.getY());
         }
 
-        // If it's a solid block with headroom, treat as passable
-        if (groundType.isSolid()) {
+        // Non-farmable but walkable terrain (paths, plain blocks) can still be traversed
+        if (isWalkableGround(groundType)) {
             return new ColumnResult(BlockClassification.PASSABLE, ground.getY());
         }
 
@@ -73,9 +79,12 @@ public class AreaScanner {
     }
 
     private static Block findGroundBlock(World world, int x, int baseY, int z) {
-        // Try baseY first, then +/- 1, +/- 2
+        // Prefer baseY, then below, then above (avoid selecting decorations above farmland)
         for (int dy = 0; dy <= 2; dy++) {
-            for (int y : new int[]{baseY + dy, baseY - dy}) {
+            int[] yCandidates = dy == 0
+                    ? new int[]{baseY}
+                    : new int[]{baseY - dy, baseY + dy};
+            for (int y : yCandidates) {
                 Block block = world.getBlockAt(x, y, z);
                 if (block.getType().isSolid() && !isUnsafeGround(block.getType())) {
                     return block;
@@ -113,6 +122,28 @@ public class AreaScanner {
         return material.isAir()
                 || material == Material.CAVE_AIR
                 || material == Material.VOID_AIR
-                || Tag.CROPS.isTagged(material);
+                || Tag.CROPS.isTagged(material)
+                || isOpenablePassage(material);
+    }
+
+    private static boolean isWalkableGround(Material material) {
+        if (!material.isSolid() || material.isInteractable()) {
+            return false;
+        }
+        if (Tag.STAIRS.isTagged(material)
+                || Tag.SLABS.isTagged(material)
+                || Tag.FENCES.isTagged(material)
+                || Tag.WALLS.isTagged(material)
+                || Tag.TRAPDOORS.isTagged(material)
+                || Tag.FENCE_GATES.isTagged(material)) {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isOpenablePassage(Material material) {
+        return Tag.DOORS.isTagged(material)
+                || Tag.FENCE_GATES.isTagged(material)
+                || Tag.TRAPDOORS.isTagged(material);
     }
 }

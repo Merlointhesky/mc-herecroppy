@@ -10,8 +10,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.Openable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
@@ -19,9 +21,11 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 public class FarmTask extends BukkitRunnable {
 
@@ -39,9 +43,11 @@ public class FarmTask extends BukkitRunnable {
     private ScanResult scanResult;
     private int currentIndex = 0;
     private int harvestPause = 0;
+    private Location previousVisitedTarget;
     private final Random random = new Random();
     private final Map<Material, Material> seedMap;
     private final Map<Material, Material> cropProductMap;
+    private final Set<String> passagesOpenedByBot = new HashSet<>();
 
     public FarmTask(HereCroppyPlugin plugin, Player player, List<Location> path,
                     AuraSkillsHelper auraSkillsHelper, ScanManager scanManager,
@@ -121,6 +127,7 @@ public class FarmTask extends BukkitRunnable {
         double dx = target.getX() - current.getX();
         double dz = target.getZ() - current.getZ();
         double horizontalDist = Math.sqrt(dx * dx + dz * dz);
+        tryOpenPassageAt(target);
 
         if (horizontalDist < SNAP_DISTANCE) {
             // Arrived at target - process crop (keep current Y to avoid going underground)
@@ -129,6 +136,12 @@ public class FarmTask extends BukkitRunnable {
             snap.setPitch(current.getPitch());
             snap.setYaw(current.getYaw());
             player.teleport(snap);
+
+            // Close passages behind us (only blocks this bot opened earlier).
+            if (previousVisitedTarget != null) {
+                tryClosePassageAt(previousVisitedTarget);
+            }
+            previousVisitedTarget = target;
 
             int blockX = target.getBlockX();
             int blockZ = target.getBlockZ();
@@ -170,6 +183,54 @@ public class FarmTask extends BukkitRunnable {
                 path.addAll(newPath);
             }
         });
+    }
+
+    private void tryOpenPassageAt(Location target) {
+        int x = target.getBlockX();
+        int z = target.getBlockZ();
+        int groundY = scanResult != null ? scanResult.getGroundY(x, z) : target.getBlockY();
+        tryOpenIfOpenable(x, groundY + 1, z);
+        tryOpenIfOpenable(x, groundY + 2, z);
+    }
+
+    private void tryClosePassageAt(Location target) {
+        int x = target.getBlockX();
+        int z = target.getBlockZ();
+        int groundY = scanResult != null ? scanResult.getGroundY(x, z) : target.getBlockY();
+        tryCloseIfOpenedByBot(x, groundY + 1, z);
+        tryCloseIfOpenedByBot(x, groundY + 2, z);
+    }
+
+    private void tryOpenIfOpenable(int x, int y, int z) {
+        Block block = player.getWorld().getBlockAt(x, y, z);
+        Material type = block.getType();
+        if (!isOpenablePassage(type)) {
+            return;
+        }
+        if (block.getBlockData() instanceof Openable openable && !openable.isOpen()) {
+            openable.setOpen(true);
+            block.setBlockData(openable);
+            passagesOpenedByBot.add(passageKey(x, y, z));
+        }
+    }
+
+    private void tryCloseIfOpenedByBot(int x, int y, int z) {
+        String key = passageKey(x, y, z);
+        if (!passagesOpenedByBot.contains(key)) {
+            return;
+        }
+        Block block = player.getWorld().getBlockAt(x, y, z);
+        if (!isOpenablePassage(block.getType())) {
+            passagesOpenedByBot.remove(key);
+            return;
+        }
+        if (block.getBlockData() instanceof Openable openable) {
+            if (openable.isOpen()) {
+                openable.setOpen(false);
+                block.setBlockData(openable);
+            }
+            passagesOpenedByBot.remove(key);
+        }
     }
 
     private boolean processCurrentBlock(Location loc) {
@@ -390,6 +451,16 @@ public class FarmTask extends BukkitRunnable {
             case WOODEN_HOE, STONE_HOE, IRON_HOE, GOLDEN_HOE, DIAMOND_HOE, NETHERITE_HOE -> true;
             default -> false;
         };
+    }
+
+    private boolean isOpenablePassage(Material material) {
+        return Tag.DOORS.isTagged(material)
+                || Tag.FENCE_GATES.isTagged(material)
+                || Tag.TRAPDOORS.isTagged(material);
+    }
+
+    private String passageKey(int x, int y, int z) {
+        return x + "," + y + "," + z;
     }
 
 }

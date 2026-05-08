@@ -5,7 +5,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 ## Features
 
 - **Area selection** — Shift-right-click with a hoe to set two corners (Point A and Point B) of your farming area.
-- **Area scanning** — After setting Point B, the area is scanned and classified as farmable, passable, or obstructed. You get a summary before starting.
+- **Area scanning** — After setting Point B, the area is scanned and classified as farmable, passable, door, or obstructed. You get a summary before starting.
 - **Smart pathfinding** — Generates a safe snake path that includes farmable and passable blocks (e.g. cobblestone paths) while avoiding obstacles like lava, water, fences, and stairs.
 - **Auto-farming toggle** — Start or stop auto-farming with `/herecroppy start` or `/herecroppy stop`.
 - **Restart from last block** — If farming stops because your inventory is full, use `/herecroppy restart` to resume from the last visited block.
@@ -41,7 +41,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.0.5.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.0.6.jar`.
 
 ## Commands
 

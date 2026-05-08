@@ -12,6 +12,7 @@ public class ScanResult {
     private final Map<String, Integer> groundYLevels;
     private final int farmableCount;
     private final int passableCount;
+    private final int doorCount;
     private final int obstructedCount;
 
     public ScanResult(Location pointA, Location pointB, Map<String, BlockClassification> classifications, Map<String, Integer> groundYLevels) {
@@ -19,16 +20,18 @@ public class ScanResult {
         this.pointB = pointB;
         this.classifications = classifications;
         this.groundYLevels = groundYLevels;
-        int farmable = 0, passable = 0, obstructed = 0;
+        int farmable = 0, passable = 0, door = 0, obstructed = 0;
         for (BlockClassification bc : classifications.values()) {
             switch (bc) {
                 case FARMABLE -> farmable++;
                 case PASSABLE -> passable++;
+                case DOOR -> door++;
                 case OBSTRUCTED -> obstructed++;
             }
         }
         this.farmableCount = farmable;
         this.passableCount = passable;
+        this.doorCount = door;
         this.obstructedCount = obstructed;
     }
 
@@ -56,6 +59,10 @@ public class ScanResult {
         return getClassification(x, z) == BlockClassification.OBSTRUCTED;
     }
 
+    public boolean isDoor(int x, int z) {
+        return getClassification(x, z) == BlockClassification.DOOR;
+    }
+
     public int getFarmableCount() {
         return farmableCount;
     }
@@ -68,12 +75,16 @@ public class ScanResult {
         return obstructedCount;
     }
 
+    public int getDoorCount() {
+        return doorCount;
+    }
+
     public int getGroundY(int x, int z) {
         return groundYLevels.getOrDefault(key(x, z), pointA.getBlockY());
     }
 
     public int getTotalWalkable() {
-        return farmableCount + passableCount;
+        return farmableCount + passableCount + doorCount;
     }
 
     private static String key(int x, int z) {

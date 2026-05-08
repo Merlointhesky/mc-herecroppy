@@ -67,6 +67,8 @@ public class FarmListener implements Listener {
                                 .append(Component.text(", ").color(NamedTextColor.GREEN))
                                 .append(Component.text(result.getPassableCount() + " walkable").color(NamedTextColor.YELLOW))
                                 .append(Component.text(", ").color(NamedTextColor.GREEN))
+                                .append(Component.text(result.getDoorCount() + " doors").color(NamedTextColor.YELLOW))
+                                .append(Component.text(", ").color(NamedTextColor.GREEN))
                                 .append(Component.text(result.getObstructedCount() + " obstructed").color(NamedTextColor.YELLOW))
                                 .append(Component.text(". Ready to ").color(NamedTextColor.GREEN))
                                 .append(Component.text("/herecroppy start").color(NamedTextColor.YELLOW))
