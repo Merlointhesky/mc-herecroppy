@@ -123,6 +123,12 @@ public class AreaScanner {
                 || material == Material.CAVE_AIR
                 || material == Material.VOID_AIR
                 || Tag.CROPS.isTagged(material)
+                || material == Material.SUGAR_CANE
+                || material == Material.PUMPKIN
+                || material == Material.MELON
+                || material == Material.NETHER_WART
+                || material == Material.ATTACHED_PUMPKIN_STEM
+                || material == Material.ATTACHED_MELON_STEM
                 || isOpenablePassage(material);
     }
 

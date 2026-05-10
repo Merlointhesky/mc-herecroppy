@@ -2,6 +2,7 @@ package com.herecroppy.herecroppy.command;
 
 import com.herecroppy.herecroppy.HereCroppyPlugin;
 import com.herecroppy.herecroppy.auraskills.AuraSkillsHelper;
+import com.herecroppy.herecroppy.config.CropConfigUI;
 import com.herecroppy.herecroppy.map.ScanManager;
 import com.herecroppy.herecroppy.path.PathGenerator;
 import com.herecroppy.herecroppy.selection.SelectionManager;
@@ -24,12 +25,25 @@ public class HereCroppyCommand implements CommandExecutor {
     private final FarmTaskManager farmTaskManager;
     private final AuraSkillsHelper auraSkillsHelper;
     private final ScanManager scanManager;
+    private final SetupWizardCommand setupWizardCommand;
+    private final CropConfigUI cropConfigUI;
 
     public HereCroppyCommand(SelectionManager selectionManager, FarmTaskManager farmTaskManager, AuraSkillsHelper auraSkillsHelper, ScanManager scanManager) {
         this.selectionManager = selectionManager;
         this.farmTaskManager = farmTaskManager;
         this.auraSkillsHelper = auraSkillsHelper;
         this.scanManager = scanManager;
+        this.setupWizardCommand = null;
+        this.cropConfigUI = null;
+    }
+
+    public HereCroppyCommand(SelectionManager selectionManager, FarmTaskManager farmTaskManager, AuraSkillsHelper auraSkillsHelper, ScanManager scanManager, SetupWizardCommand setupWizardCommand, CropConfigUI cropConfigUI) {
+        this.selectionManager = selectionManager;
+        this.farmTaskManager = farmTaskManager;
+        this.auraSkillsHelper = auraSkillsHelper;
+        this.scanManager = scanManager;
+        this.setupWizardCommand = setupWizardCommand;
+        this.cropConfigUI = cropConfigUI;
     }
 
     @Override
@@ -42,7 +56,7 @@ public class HereCroppyCommand implements CommandExecutor {
         }
 
         if (args.length < 1) {
-            player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear>")
+            player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear|setup|config>")
                     .color(NamedTextColor.YELLOW));
             return true;
         }
@@ -142,10 +156,27 @@ public class HereCroppyCommand implements CommandExecutor {
                 selectionManager.clearSelection(player.getUniqueId());
                 scanManager.clearScan(player.getUniqueId());
                 farmTaskManager.clearLastStop(player);
-                player.sendMessage(Component.text("Selection cleared.")
+                HereCroppyPlugin.getInstance().getSetupManager().clearSetupConfig(player.getUniqueId());
+                player.sendMessage(Component.text("Selection and setup configuration cleared.")
                         .color(NamedTextColor.GREEN));
             }
-            default -> player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear>")
+            case "setup" -> {
+                if (setupWizardCommand != null) {
+                    setupWizardCommand.onCommand(player, command, label, args);
+                } else {
+                    player.sendMessage(Component.text("Setup wizard is not available.")
+                            .color(NamedTextColor.RED));
+                }
+            }
+            case "config" -> {
+                if (cropConfigUI != null) {
+                    cropConfigUI.openCategoryMenu(player);
+                } else {
+                    player.sendMessage(Component.text("Crop configuration is not available.")
+                            .color(NamedTextColor.RED));
+                }
+            }
+            default -> player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear|setup|config>")
                     .color(NamedTextColor.YELLOW));
         }
 

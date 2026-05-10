@@ -3,6 +3,7 @@ package com.herecroppy.herecroppy.listener;
 import com.herecroppy.herecroppy.map.ScanManager;
 import com.herecroppy.herecroppy.map.ScanResult;
 import com.herecroppy.herecroppy.selection.SelectionManager;
+import com.herecroppy.herecroppy.setup.SetupManager;
 import com.herecroppy.herecroppy.task.FarmTaskManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -22,11 +23,13 @@ public class FarmListener implements Listener {
     private final SelectionManager selectionManager;
     private final FarmTaskManager farmTaskManager;
     private final ScanManager scanManager;
+    private final SetupManager setupManager;
 
-    public FarmListener(SelectionManager selectionManager, FarmTaskManager farmTaskManager, ScanManager scanManager) {
+    public FarmListener(SelectionManager selectionManager, FarmTaskManager farmTaskManager, ScanManager scanManager, SetupManager setupManager) {
         this.selectionManager = selectionManager;
         this.farmTaskManager = farmTaskManager;
         this.scanManager = scanManager;
+        this.setupManager = setupManager;
     }
 
     @EventHandler
@@ -41,6 +44,11 @@ public class FarmListener implements Listener {
         if (!isHoe(item.getType())) return;
 
         if (event.getClickedBlock() == null) return;
+
+        // Don't process selection if player is in setup mode
+        if (setupManager.isInSetup(player.getUniqueId())) {
+            return;
+        }
 
         Location clicked = event.getClickedBlock().getLocation();
 
