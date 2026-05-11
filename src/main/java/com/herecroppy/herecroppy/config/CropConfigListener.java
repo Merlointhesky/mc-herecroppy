@@ -1,7 +1,9 @@
 package com.herecroppy.herecroppy.config;
 
+import com.herecroppy.herecroppy.HereCroppyPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,10 +25,27 @@ public class CropConfigListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        String title = event.getView().getTitle();
-        // Convert Component to string for comparison
-        String titleStr = title;
-        if (!titleStr.contains("HereCroppy")) return;
+        // DEBUG: log the raw title string returned by getTitle() so we can see its format
+        String rawTitle = event.getView().getTitle();
+        HereCroppyPlugin.getInstance().getLogger().info(
+            "[CropConfigListener DEBUG] Raw title from getView().getTitle(): '" + rawTitle + "'"
+        );
+
+        // Also log the plain-text serialized version of the inventory's title Component
+        Component titleComponent = event.getView().title();
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(titleComponent);
+        HereCroppyPlugin.getInstance().getLogger().info(
+            "[CropConfigListener DEBUG] Plain-text title: '" + plainTitle + "'"
+        );
+
+        // Use the plain-text title for comparison
+        String titleStr = plainTitle;
+        if (!titleStr.contains("HereCroppy")) {
+            HereCroppyPlugin.getInstance().getLogger().info(
+                "[CropConfigListener DEBUG] Title does NOT contain 'HereCroppy' — ignoring click. Raw='" + rawTitle + "'"
+            );
+            return;
+        }
 
         event.setCancelled(true);
 

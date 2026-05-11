@@ -18,6 +18,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.Openable;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
@@ -305,6 +306,7 @@ public class FarmTask extends BukkitRunnable {
                             int dropMultiplier = calculateDropMultiplier();
                             ItemStack tool = new ItemStack(Material.IRON_HOE);
                             block.breakNaturally(tool);
+                            collectDroppedItems(block.getLocation());
 
                             // Add extra fortune drops
                             if (dropMultiplier > 1) {
@@ -389,6 +391,33 @@ public class FarmTask extends BukkitRunnable {
         // 1. Is there a crop? Check ripeness / bonemeal
         Block cropBlock = findCropBlock(loc);
         if (cropBlock != null && isCrop(cropBlock)) {
+            plugin.getLogger().info(
+                "[FarmTask DEBUG] Found crop at " + cropBlock.getLocation().toVector()
+                + " type=" + cropBlock.getType()
+                + " isAgeable=" + (cropBlock.getBlockData() instanceof Ageable)
+            );
+
+            // Sugar cane is not Ageable — handle it separately
+            if (cropBlock.getType() == Material.SUGAR_CANE) {
+                // Only harvest if there is at least a 2nd block above the base (i.e. height >= 2)
+                Block base = cropBlock;
+                // Walk down to the actual base (dirt/grass/farmland below)
+                while (base.getY() > 0 && base.getRelative(org.bukkit.block.BlockFace.DOWN).getType() == Material.SUGAR_CANE) {
+                    base = base.getRelative(org.bukkit.block.BlockFace.DOWN);
+                }
+                Block secondBlock = base.getRelative(org.bukkit.block.BlockFace.UP);
+                boolean isRipe = secondBlock.getType() == Material.SUGAR_CANE;
+                plugin.getLogger().info(
+                    "[FarmTask DEBUG] Sugar cane base Y=" + base.getY()
+                    + " secondBlock=" + secondBlock.getType()
+                    + " isRipe(height>=2)=" + isRipe
+                );
+                if (isRipe) {
+                    return harvestCrop(base); // pass the base so harvestSugarCane finds it correctly
+                }
+                return false;
+            }
+
             if (cropBlock.getBlockData() instanceof Ageable ageable) {
                 if (ageable.getAge() == ageable.getMaximumAge()) {
                     return harvestCrop(cropBlock);
@@ -538,9 +567,10 @@ public class FarmTask extends BukkitRunnable {
         // Apply fortune/double drops
         int dropMultiplier = calculateDropMultiplier();
 
-        // Break and collect
+        // Break and collect drops immediately
         ItemStack tool = new ItemStack(Material.IRON_HOE);
         cropBlock.breakNaturally(tool);
+        collectDroppedItems(cropBlock.getLocation());
 
         // Add extra fortune drops directly to inventory or dump box
         if (dropMultiplier > 1) {
@@ -595,6 +625,7 @@ public class FarmTask extends BukkitRunnable {
         while (toBreak.getType() == Material.SUGAR_CANE) {
             ItemStack tool = new ItemStack(Material.IRON_HOE);
             toBreak.breakNaturally(tool);
+            collectDroppedItems(toBreak.getLocation());
             
             // Move up to next block
             toBreak = toBreak.getWorld().getBlockAt(toBreak.getX(), toBreak.getY() + 1, toBreak.getZ());
@@ -911,6 +942,29 @@ public class FarmTask extends BukkitRunnable {
                 }
             }
         }
+    }
+
+    /**
+     * Collects all dropped items within a 2-block radius of the given location.
+     * This ensures items dropped from broken crops don't get left behind.
+     */
+    private void collectDroppedItems(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return;
+        }
+
+        // Get all entities within a 2-block radius
+        location.getWorld().getNearbyEntities(location, 2.0, 2.0, 2.0).forEach(entity -> {
+            if (entity instanceof Item itemEntity) {
+                ItemStack itemStack = itemEntity.getItemStack();
+                if (itemStack != null && itemStack.getAmount() > 0) {
+                    // Deposit the item to inventory or dump boxes
+                    depositCropItem(itemStack.clone());
+                    // Remove the item entity from the world
+                    itemEntity.remove();
+                }
+            }
+        });
     }
 
 }
