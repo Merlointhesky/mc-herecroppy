@@ -25,24 +25,20 @@ public class CropConfigListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        // DEBUG: log the raw title string returned by getTitle() so we can see its format
-        String rawTitle = event.getView().getTitle();
-        HereCroppyPlugin.getInstance().getLogger().info(
-            "[CropConfigListener DEBUG] Raw title from getView().getTitle(): '" + rawTitle + "'"
-        );
-
-        // Also log the plain-text serialized version of the inventory's title Component
+        // DEBUG: log the raw title string returned by getView().title() (as plain text)
+        // so we can see its format
         Component titleComponent = event.getView().title();
         String plainTitle = PlainTextComponentSerializer.plainText().serialize(titleComponent);
+        
         HereCroppyPlugin.getInstance().getLogger().info(
-            "[CropConfigListener DEBUG] Plain-text title: '" + plainTitle + "'"
+            "[CropConfigListener DEBUG] Plain-text title from getView().title(): '" + plainTitle + "'"
         );
 
         // Use the plain-text title for comparison
         String titleStr = plainTitle;
         if (!titleStr.contains("HereCroppy")) {
             HereCroppyPlugin.getInstance().getLogger().info(
-                "[CropConfigListener DEBUG] Title does NOT contain 'HereCroppy' — ignoring click. Raw='" + rawTitle + "'"
+                "[CropConfigListener DEBUG] Title does NOT contain 'HereCroppy' — ignoring click. Title='" + titleStr + "'"
             );
             return;
         }
