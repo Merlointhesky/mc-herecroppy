@@ -48,9 +48,9 @@ public class CropConfigUI {
 
         int slot = 10;
         addCropItem(inventory, slot++, Material.WHEAT, player.getUniqueId());
-        addCropItem(inventory, slot++, Material.CARROTS, player.getUniqueId());
-        addCropItem(inventory, slot++, Material.POTATOES, player.getUniqueId());
-        addCropItem(inventory, slot++, Material.BEETROOTS, player.getUniqueId());
+        addCropItem(inventory, slot++, Material.CARROT, player.getUniqueId());
+        addCropItem(inventory, slot++, Material.POTATO, player.getUniqueId());
+        addCropItem(inventory, slot++, Material.BEETROOT, player.getUniqueId());
 
         // Back button
         ItemStack backItem = createNavigationItem(Material.ARROW, "Back to Categories");
@@ -66,8 +66,8 @@ public class CropConfigUI {
         int slot = 10;
         addCropItem(inventory, slot++, Material.NETHER_WART, player.getUniqueId());
         addCropItem(inventory, slot++, Material.SUGAR_CANE, player.getUniqueId());
-        addCropItem(inventory, slot++, Material.PUMPKIN_STEM, player.getUniqueId());
-        addCropItem(inventory, slot++, Material.MELON_STEM, player.getUniqueId());
+        addCropItem(inventory, slot++, Material.PUMPKIN, player.getUniqueId());
+        addCropItem(inventory, slot++, Material.MELON, player.getUniqueId());
 
         // Back button
         ItemStack backItem = createNavigationItem(Material.ARROW, "Back to Categories");
@@ -212,22 +212,23 @@ public class CropConfigUI {
     }
 
     private String getCropDisplayName(Material cropType) {
-        return switch (cropType) {
-            case WHEAT -> "Wheat";
-            case CARROTS -> "Carrots";
-            case POTATOES -> "Potatoes";
-            case BEETROOTS -> "Beetroots";
-            case NETHER_WART -> "Nether Wart";
-            case SUGAR_CANE -> "Sugar Cane";
-            case PUMPKIN_STEM -> "Pumpkins";
-            case MELON_STEM -> "Watermelons";
-            default -> cropType.name();
-        };
+    	return switch (cropType) {
+    		case WHEAT -> "Wheat";
+    		case CARROT -> "Carrots";
+    		case POTATO -> "Potatoes";
+    		case BEETROOT -> "Beetroots";
+    		case NETHER_WART -> "Nether Wart";
+    		case SUGAR_CANE -> "Sugar Cane";
+    		case PUMPKIN -> "Pumpkins";
+    		case MELON -> "Watermelons";
+    		default -> cropType.name();
+    	};
     }
 
     private boolean isSeedProducingCrop(Material cropType) {
-        return cropType == Material.WHEAT || cropType == Material.CARROTS ||
-               cropType == Material.POTATOES || cropType == Material.BEETROOTS ||
-               cropType == Material.NETHER_WART || cropType == Material.SUGAR_CANE;
+    	// Only crops with DISTINCT seed items should show the "Dump Seeds" toggle
+    	// Self-seeding crops (where the crop IS the seed) don't need this toggle
+    	return cropType == Material.WHEAT || cropType == Material.BEETROOT ||
+    	       cropType == Material.PUMPKIN || cropType == Material.MELON;
     }
 }

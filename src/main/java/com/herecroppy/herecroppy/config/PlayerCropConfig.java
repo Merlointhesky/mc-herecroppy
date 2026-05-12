@@ -18,17 +18,17 @@ public class PlayerCropConfig {
     }
 
     private void initializeDefaults() {
-        // Farmland crops
-        cropSettings.put(Material.WHEAT, new CropSettings(Material.WHEAT, true, true, false));
-        cropSettings.put(Material.CARROTS, new CropSettings(Material.CARROTS, true, true, false));
-        cropSettings.put(Material.POTATOES, new CropSettings(Material.POTATOES, true, true, false));
-        cropSettings.put(Material.BEETROOTS, new CropSettings(Material.BEETROOTS, true, true, false));
-
-        // Special crops
-        cropSettings.put(Material.NETHER_WART, new CropSettings(Material.NETHER_WART, true, true, false));
-        cropSettings.put(Material.SUGAR_CANE, new CropSettings(Material.SUGAR_CANE, false, true, false));
-        cropSettings.put(Material.PUMPKIN_STEM, new CropSettings(Material.PUMPKIN_STEM, false, true, true));
-        cropSettings.put(Material.MELON_STEM, new CropSettings(Material.MELON_STEM, false, true, true));
+    	// Farmland crops
+    	cropSettings.put(Material.WHEAT, new CropSettings(Material.WHEAT, true, true, false));
+    	cropSettings.put(Material.CARROT, new CropSettings(Material.CARROT, true, true, false));
+    	cropSettings.put(Material.POTATO, new CropSettings(Material.POTATO, true, true, false));
+    	cropSettings.put(Material.BEETROOT, new CropSettings(Material.BEETROOT, true, true, false));
+   
+    	// Special crops
+    	cropSettings.put(Material.NETHER_WART, new CropSettings(Material.NETHER_WART, true, true, false));
+    	cropSettings.put(Material.SUGAR_CANE, new CropSettings(Material.SUGAR_CANE, false, true, false));
+    	cropSettings.put(Material.PUMPKIN, new CropSettings(Material.PUMPKIN, false, true, true));
+    	cropSettings.put(Material.MELON, new CropSettings(Material.MELON, false, true, true));
     }
 
     public String getPlayerId() {

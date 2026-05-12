@@ -59,6 +59,7 @@ public class FarmTask extends BukkitRunnable {
     private final Random random = new Random();
     private final Map<Material, Material> seedMap;
     private final Map<Material, Material> cropProductMap;
+    private final Map<Material, Material> cropBlockToConfigKeyMap;
     private final Set<String> passagesOpenedByBot = new HashSet<>();
     private int bonemealCollectedThisLoop = 0;
     private final Map<String, Material> pumpkinMelonBlockMap = new HashMap<>();
@@ -76,16 +77,18 @@ public class FarmTask extends BukkitRunnable {
         this.cropConfigManager = plugin.getCropConfigManager();
         this.scanResult = scanResult;
 
+        // Maps seed ITEM to crop BLOCK material
         this.seedMap = new HashMap<>();
-        seedMap.put(Material.WHEAT, Material.WHEAT_SEEDS);
-        seedMap.put(Material.CARROTS, Material.CARROT);
-        seedMap.put(Material.POTATOES, Material.POTATO);
-        seedMap.put(Material.BEETROOTS, Material.BEETROOT_SEEDS);
+        seedMap.put(Material.WHEAT_SEEDS, Material.WHEAT);
+        seedMap.put(Material.CARROT, Material.CARROTS);
+        seedMap.put(Material.POTATO, Material.POTATOES);
+        seedMap.put(Material.BEETROOT_SEEDS, Material.BEETROOTS);
         seedMap.put(Material.NETHER_WART, Material.NETHER_WART);
         seedMap.put(Material.SUGAR_CANE, Material.SUGAR_CANE);
-        seedMap.put(Material.PUMPKIN_STEM, Material.PUMPKIN_SEEDS);
-        seedMap.put(Material.MELON_STEM, Material.MELON_SEEDS);
-
+        seedMap.put(Material.PUMPKIN_SEEDS, Material.PUMPKIN_STEM);
+        seedMap.put(Material.MELON_SEEDS, Material.MELON_STEM);
+       
+        // Maps crop BLOCK material to harvested PRODUCT item
         this.cropProductMap = new HashMap<>();
         cropProductMap.put(Material.WHEAT, Material.WHEAT);
         cropProductMap.put(Material.CARROTS, Material.CARROT);
@@ -93,8 +96,19 @@ public class FarmTask extends BukkitRunnable {
         cropProductMap.put(Material.BEETROOTS, Material.BEETROOT);
         cropProductMap.put(Material.NETHER_WART, Material.NETHER_WART);
         cropProductMap.put(Material.SUGAR_CANE, Material.SUGAR_CANE);
-        cropProductMap.put(Material.PUMPKIN_STEM, Material.PUMPKIN);
-        cropProductMap.put(Material.MELON_STEM, Material.MELON);
+        cropProductMap.put(Material.PUMPKIN_STEM, Material.PUMPKIN_SEEDS);
+        cropProductMap.put(Material.MELON_STEM, Material.MELON_SEEDS);
+        
+        // Maps crop BLOCK material to config key (for CropConfigManager lookups)
+        this.cropBlockToConfigKeyMap = new HashMap<>();
+        cropBlockToConfigKeyMap.put(Material.WHEAT, Material.WHEAT);
+        cropBlockToConfigKeyMap.put(Material.CARROTS, Material.CARROT);
+        cropBlockToConfigKeyMap.put(Material.POTATOES, Material.POTATO);
+        cropBlockToConfigKeyMap.put(Material.BEETROOTS, Material.BEETROOT);
+        cropBlockToConfigKeyMap.put(Material.NETHER_WART, Material.NETHER_WART);
+        cropBlockToConfigKeyMap.put(Material.SUGAR_CANE, Material.SUGAR_CANE);
+        cropBlockToConfigKeyMap.put(Material.PUMPKIN_STEM, Material.PUMPKIN);
+        cropBlockToConfigKeyMap.put(Material.MELON_STEM, Material.MELON);
     }
 
     public HereCroppyPlugin getPlugin() {
@@ -138,11 +152,6 @@ public class FarmTask extends BukkitRunnable {
 
         // Map pumpkin and melon blocks at each iteration
         mapPumpkinMelonBlocks();
-
-        // Collect bonemeal periodically (every 20 ticks / 1 second)
-        if (plugin.getServer().getCurrentTick() % 20 == 0) {
-            collectBonemeal();
-        }
 
         // If we're pausing after a harvest, count down
         if (harvestPause > 0) {
@@ -213,6 +222,10 @@ public class FarmTask extends BukkitRunnable {
             currentIndex++;
             if (currentIndex >= path.size()) {
                 currentIndex = 0;
+                // Reset bonemeal collection counter at loop start
+                bonemealCollectedThisLoop = 0;
+                // Collect bonemeal once per loop
+                collectBonemeal();
                 triggerRescan();
             }
         } else {
@@ -304,17 +317,16 @@ public class FarmTask extends BukkitRunnable {
                         if (cropConfigManager.isCollectingEnabled(player.getUniqueId(), blockType)) {
                             auraSkillsHelper.addFarmingXp(player, BASE_HARVEST_XP);
                             int dropMultiplier = calculateDropMultiplier();
-                            ItemStack tool = new ItemStack(Material.IRON_HOE);
-                            block.breakNaturally(tool);
-                            collectDroppedItems(block.getLocation());
+                            
+                            // Collect as whole block instead of breaking (which would split melons into slices)
+                            block.setType(Material.AIR);
+                            ItemStack fruit = new ItemStack(blockType, 1);
+                            depositCropItem(fruit);
 
                             // Add extra fortune drops
                             if (dropMultiplier > 1) {
-                                Material product = cropProductMap.get(blockType == Material.PUMPKIN ? Material.PUMPKIN_STEM : Material.MELON_STEM);
-                                if (product != null) {
-                                    ItemStack extraDrops = new ItemStack(product, dropMultiplier - 1);
-                                    depositCropItem(extraDrops);
-                                }
+                                ItemStack extraDrops = new ItemStack(blockType, dropMultiplier - 1);
+                                depositCropItem(extraDrops);
                             }
 
                             player.sendMessage(Component.text("Here Crop! We got ")
@@ -388,75 +400,141 @@ public class FarmTask extends BukkitRunnable {
             above = loc.getBlock();
         }
 
-        // 1. Is there a crop? Check ripeness / bonemeal
-        Block cropBlock = findCropBlock(loc);
-        if (cropBlock != null && isCrop(cropBlock)) {
-            plugin.getLogger().info(
-                "[FarmTask DEBUG] Found crop at " + cropBlock.getLocation().toVector()
-                + " type=" + cropBlock.getType()
-                + " isAgeable=" + (cropBlock.getBlockData() instanceof Ageable)
-            );
+        boolean justSeeded = false;
 
-            // Sugar cane is not Ageable — handle it separately
-            if (cropBlock.getType() == Material.SUGAR_CANE) {
-                // Only harvest if there is at least a 2nd block above the base (i.e. height >= 2)
-                Block base = cropBlock;
-                // Walk down to the actual base (dirt/grass/farmland below)
-                while (base.getY() > 0 && base.getRelative(org.bukkit.block.BlockFace.DOWN).getType() == Material.SUGAR_CANE) {
-                    base = base.getRelative(org.bukkit.block.BlockFace.DOWN);
-                }
-                Block secondBlock = base.getRelative(org.bukkit.block.BlockFace.UP);
-                boolean isRipe = secondBlock.getType() == Material.SUGAR_CANE;
-                plugin.getLogger().info(
-                    "[FarmTask DEBUG] Sugar cane base Y=" + base.getY()
-                    + " secondBlock=" + secondBlock.getType()
-                    + " isRipe(height>=2)=" + isRipe
-                );
-                if (isRipe) {
-                    return harvestCrop(base); // pass the base so harvestSugarCane finds it correctly
-                }
-                return false;
-            }
-
-            if (cropBlock.getBlockData() instanceof Ageable ageable) {
-                if (ageable.getAge() == ageable.getMaximumAge()) {
-                    return harvestCrop(cropBlock);
-                }
-
-                // Crop is not ripe — try bonemeal to speed it up (if enabled for this crop)
-                Material cropType = cropBlock.getType();
-                if (cropConfigManager.isBonemealEnabled(player.getUniqueId(), cropType) && hasItem(Material.BONE_MEAL)) {
-                    removeOneItem(Material.BONE_MEAL);
-                    cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
-                    // Re-check after bonemeal
-                    if (cropBlock.getBlockData() instanceof Ageable after) {
-                        if (after.getAge() == after.getMaximumAge()) {
-                            return harvestCrop(cropBlock);
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        boolean didSomething = false;
-
-        // 2. Is it prepared? If not, till it
+        // STEP A: PREPARE SOIL - Till if needed
         if (isTillable(ground) && above.getType().isAir()) {
             if (tryTill(ground)) {
-                didSomething = true;
+                return true;
             }
         }
 
-        // 3. Is it seeded? If not, plant
+        // STEP B: SEED IF NEEDED - Plant first available seed
         if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
                 && above.getType().isAir()) {
             if (tryPlant(ground, above)) {
-                didSomething = true;
+                justSeeded = true;
+                // Continue to check for bonemeal on newly planted crop
             }
         }
 
-        return didSomething;
+        // STEP C: BONEMEAL - Apply to unripe crops (existing or just planted)
+        Block cropBlock = findCropBlock(loc);
+        if (cropBlock != null && isCrop(cropBlock)) {
+            Material cropConfigKey = getCropConfigKey(cropBlock.getType());
+            
+            // Handle sugar cane specially (not Ageable)
+            if (cropBlock.getType() == Material.SUGAR_CANE) {
+                // Sugar cane doesn't need bonemeal, skip to harvest
+                return processHarvestAndReseed(cropBlock, justSeeded);
+            }
+
+            // For Ageable crops
+            if (cropBlock.getBlockData() instanceof Ageable ageable) {
+                // Apply bonemeal if crop is not fully grown
+                if (ageable.getAge() < ageable.getMaximumAge()) {
+                    if (cropConfigManager.isBonemealEnabled(player.getUniqueId(), cropConfigKey) && hasItem(Material.BONE_MEAL)) {
+                        removeOneItem(Material.BONE_MEAL);
+                        cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
+                        // Re-check after bonemeal
+                        if (cropBlock.getBlockData() instanceof Ageable after) {
+                            ageable = after;
+                        }
+                    }
+                }
+
+                // STEP D: HARVEST + RESEED - If crop is now fully grown
+                if (ageable.getAge() == ageable.getMaximumAge()) {
+                    return processHarvestAndReseed(cropBlock, justSeeded);
+                }
+            }
+        }
+
+        return justSeeded;
+    }
+
+    /**
+     * Process harvesting and reseeding of a crop.
+     * @param cropBlock The crop block to harvest
+     * @param justSeeded Whether we just planted this crop (affects bonemeal usage)
+     * @return true if harvest occurred
+     */
+    private boolean processHarvestAndReseed(Block cropBlock, boolean justSeeded) {
+        Material cropBlockType = cropBlock.getType();
+        Material cropConfigKey = getCropConfigKey(cropBlockType);
+
+        // Check if collecting is enabled for this crop
+        if (!cropConfigManager.isCollectingEnabled(player.getUniqueId(), cropConfigKey)) {
+            return false;
+        }
+
+        // Special handling for sugar cane - break at height 2, leave 1 block to regrow
+        if (cropBlockType == Material.SUGAR_CANE) {
+            return harvestSugarCane(cropBlock);
+        }
+
+        // Award AuraSkills XP
+        auraSkillsHelper.addFarmingXp(player, BASE_HARVEST_XP);
+
+        // Apply fortune/double drops
+        int dropMultiplier = calculateDropMultiplier();
+
+        // Break and collect drops immediately
+        ItemStack tool = new ItemStack(Material.IRON_HOE);
+        cropBlock.breakNaturally(tool);
+        collectDroppedItems(cropBlock.getLocation());
+
+        // Add extra fortune drops directly to inventory or dump box
+        if (dropMultiplier > 1) {
+            Material product = cropProductMap.get(cropBlockType);
+            if (product != null) {
+                ItemStack extraDrops = new ItemStack(product, dropMultiplier - 1);
+                depositCropItem(extraDrops);
+            }
+        }
+
+        // Replant if seeding is enabled and we have seeds
+        if (cropConfigManager.isSeedingEnabled(player.getUniqueId(), cropConfigKey)) {
+            Material seedItem = getSeedItemForCrop(cropBlockType);
+            if (seedItem != null && hasItem(seedItem)) {
+                removeOneItem(seedItem);
+                cropBlock.setType(cropBlockType);
+                if (cropBlock.getBlockData() instanceof Ageable newAgeable) {
+                    newAgeable.setAge(0);
+                    cropBlock.setBlockData(newAgeable);
+                }
+                
+                // Apply bonemeal once to newly planted crop if enabled
+                if (cropConfigManager.isBonemealEnabled(player.getUniqueId(), cropConfigKey) && hasItem(Material.BONE_MEAL)) {
+                    removeOneItem(Material.BONE_MEAL);
+                    cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
+                }
+            }
+        }
+
+        // Send message
+        player.sendMessage(Component.text("Here Crop! We got ")
+                .color(NamedTextColor.GREEN)
+                .append(Component.text(formatName(cropBlockType.name())).color(NamedTextColor.YELLOW))
+                .append(Component.text("!").color(NamedTextColor.GREEN)));
+        return true;
+    }
+
+    /**
+     * Get the seed item for a given crop block type.
+     */
+    private Material getSeedItemForCrop(Material cropBlockType) {
+        return switch (cropBlockType) {
+            case WHEAT -> Material.WHEAT_SEEDS;
+            case CARROTS -> Material.CARROT;
+            case POTATOES -> Material.POTATO;
+            case BEETROOTS -> Material.BEETROOT_SEEDS;
+            case NETHER_WART -> Material.NETHER_WART;
+            case SUGAR_CANE -> Material.SUGAR_CANE;
+            case PUMPKIN_STEM -> Material.PUMPKIN_SEEDS;
+            case MELON_STEM -> Material.MELON_SEEDS;
+            default -> null;
+        };
     }
 
     private Block findCropBlock(Location loc) {
@@ -477,6 +555,14 @@ public class FarmTask extends BukkitRunnable {
         }
         // Sugar cane is not Ageable but is a crop
         return type == Material.SUGAR_CANE;
+    }
+    
+    /**
+     * Maps a crop block material to its config key for CropConfigManager lookups.
+     * For example, CARROTS block maps to CARROT config key.
+     */
+    private Material getCropConfigKey(Material cropBlockType) {
+        return cropBlockToConfigKeyMap.getOrDefault(cropBlockType, cropBlockType);
     }
 
     private boolean isAdjacentToWater(Block block) {
@@ -542,64 +628,6 @@ public class FarmTask extends BukkitRunnable {
         return result.toString();
     }
 
-    private boolean harvestCrop(Block cropBlock) {
-        Material cropType = cropBlock.getType();
-
-        // Check if collecting is enabled for this crop
-        if (!cropConfigManager.isCollectingEnabled(player.getUniqueId(), cropType)) {
-            return false;
-        }
-
-        // Special handling for pumpkins and watermelons - don't break the stem, just harvest adjacent fruit
-        if (cropType == Material.PUMPKIN_STEM || cropType == Material.MELON_STEM) {
-            // These are handled by harvestAdjacentPumpkinMelon, not here
-            return false;
-        }
-
-        // Special handling for sugar cane - break at height 2, leave 1 block to regrow
-        if (cropType == Material.SUGAR_CANE) {
-            return harvestSugarCane(cropBlock);
-        }
-
-        // Award AuraSkills XP
-        auraSkillsHelper.addFarmingXp(player, BASE_HARVEST_XP);
-
-        // Apply fortune/double drops
-        int dropMultiplier = calculateDropMultiplier();
-
-        // Break and collect drops immediately
-        ItemStack tool = new ItemStack(Material.IRON_HOE);
-        cropBlock.breakNaturally(tool);
-        collectDroppedItems(cropBlock.getLocation());
-
-        // Add extra fortune drops directly to inventory or dump box
-        if (dropMultiplier > 1) {
-            Material product = cropProductMap.get(cropType);
-            if (product != null) {
-                ItemStack extraDrops = new ItemStack(product, dropMultiplier - 1);
-                depositCropItem(extraDrops);
-            }
-        }
-
-        // Replant
-        Material seedType = seedMap.get(cropType);
-        if (seedType != null && hasItem(seedType)) {
-            removeOneItem(seedType);
-            cropBlock.setType(cropType);
-            if (cropBlock.getBlockData() instanceof Ageable newAgeable) {
-                newAgeable.setAge(0);
-                cropBlock.setBlockData(newAgeable);
-            }
-        }
-
-        // Send message
-        player.sendMessage(Component.text("Here Crop! We got ")
-                .color(NamedTextColor.GREEN)
-                .append(Component.text(formatName(cropType.name())).color(NamedTextColor.YELLOW))
-                .append(Component.text("!").color(NamedTextColor.GREEN)));
-        return true;
-    }
-
     private boolean harvestSugarCane(Block cropBlock) {
         // Award AuraSkills XP
         auraSkillsHelper.addFarmingXp(player, BASE_HARVEST_XP);
@@ -649,32 +677,34 @@ public class FarmTask extends BukkitRunnable {
         boolean isSoulSand = ground.getType() == Material.SOUL_SAND;
         boolean isFarmland = ground.getType() == Material.FARMLAND;
 
-        Material[][] seedPriority = {
-                {Material.WHEAT_SEEDS, Material.WHEAT},
-                {Material.CARROT, Material.CARROTS},
-                {Material.POTATO, Material.POTATOES},
-                {Material.BEETROOT_SEEDS, Material.BEETROOTS},
-                {Material.NETHER_WART, Material.NETHER_WART},
-                {Material.PUMPKIN_SEEDS, Material.PUMPKIN_STEM},
-                {Material.MELON_SEEDS, Material.MELON_STEM},
-                {Material.SUGAR_CANE, Material.SUGAR_CANE}
+        // Array of: {seedItem, configKey, cropBlockMaterial}
+        Object[][] seedPriority = {
+                {Material.WHEAT_SEEDS, Material.WHEAT, Material.WHEAT},
+                {Material.CARROT, Material.CARROT, Material.CARROTS},
+                {Material.POTATO, Material.POTATO, Material.POTATOES},
+                {Material.BEETROOT_SEEDS, Material.BEETROOT, Material.BEETROOTS},
+                {Material.NETHER_WART, Material.NETHER_WART, Material.NETHER_WART},
+                {Material.PUMPKIN_SEEDS, Material.PUMPKIN, Material.PUMPKIN_STEM},
+                {Material.MELON_SEEDS, Material.MELON, Material.MELON_STEM},
+                {Material.SUGAR_CANE, Material.SUGAR_CANE, Material.SUGAR_CANE}
         };
 
-        for (Material[] pair : seedPriority) {
-            Material seedType = pair[0];
-            Material cropType = pair[1];
+        for (Object[] entry : seedPriority) {
+            Material seedType = (Material) entry[0];
+            Material configKey = (Material) entry[1];
+            Material cropBlockType = (Material) entry[2];
 
             // Check if seeding is enabled for this crop
-            if (!cropConfigManager.isSeedingEnabled(player.getUniqueId(), cropType)) {
+            if (!cropConfigManager.isSeedingEnabled(player.getUniqueId(), configKey)) {
                 continue;
             }
 
             // Nether Wart only on Soul Sand
-            if (cropType == Material.NETHER_WART && !isSoulSand) continue;
-            if (cropType == Material.NETHER_WART && isSoulSand) {
+            if (configKey == Material.NETHER_WART && !isSoulSand) continue;
+            if (configKey == Material.NETHER_WART && isSoulSand) {
                 if (hasItem(seedType)) {
                     removeOneItem(seedType);
-                    above.setType(cropType);
+                    above.setType(cropBlockType);
                     if (above.getBlockData() instanceof Ageable ageable) {
                         ageable.setAge(0);
                         above.setBlockData(ageable);
@@ -685,28 +715,28 @@ public class FarmTask extends BukkitRunnable {
             }
 
             // Sugar Cane only on dirt/grass adjacent to water
-            if (cropType == Material.SUGAR_CANE) {
+            if (configKey == Material.SUGAR_CANE) {
                 if (isSoulSand) continue; // Skip if on soul sand
                 if (!isFarmland && !isTillable(ground)) continue; // Must be on dirt-like or farmland
                 if (!isAdjacentToWater(ground)) continue; // Must be adjacent to water
                 if (hasItem(seedType)) {
                     removeOneItem(seedType);
-                    above.setType(cropType);
+                    above.setType(cropBlockType);
                     return true;
                 }
                 continue;
             }
 
             // Pumpkin and Melon stems only on farmland
-            if ((cropType == Material.PUMPKIN_STEM || cropType == Material.MELON_STEM) && !isFarmland) continue;
-
+            if ((configKey == Material.PUMPKIN || configKey == Material.MELON) && !isFarmland) continue;
+         
             // Regular crops (wheat, carrots, potatoes, beetroots) only on farmland
-            if ((cropType == Material.WHEAT || cropType == Material.CARROTS ||
-                 cropType == Material.POTATOES || cropType == Material.BEETROOTS) && !isFarmland) continue;
+            if ((configKey == Material.WHEAT || configKey == Material.CARROT ||
+                 configKey == Material.POTATO || configKey == Material.BEETROOT) && !isFarmland) continue;
 
             if (hasItem(seedType)) {
                 removeOneItem(seedType);
-                above.setType(cropType);
+                above.setType(cropBlockType);
                 if (above.getBlockData() instanceof Ageable ageable) {
                     ageable.setAge(0);
                     above.setBlockData(ageable);
@@ -803,22 +833,29 @@ public class FarmTask extends BukkitRunnable {
         }
 
         int targetAmount = setup.getBonemealPerLoop();
+        int remaining = targetAmount - bonemealCollectedThisLoop;
+        
+        // Only collect if we haven't reached the per-loop limit
+        if (remaining <= 0) {
+            return;
+        }
+
         int collected = 0;
 
-        // Collect bonemeal from the box
+        // Collect bonemeal from the box up to the remaining amount
         for (ItemStack item : container.getInventory().getContents()) {
-            if (item != null && item.getType() == Material.BONE_MEAL && collected < targetAmount) {
-                int toTake = Math.min(item.getAmount(), targetAmount - collected);
+            if (item != null && item.getType() == Material.BONE_MEAL && collected < remaining) {
+                int toTake = Math.min(item.getAmount(), remaining - collected);
                 item.setAmount(item.getAmount() - toTake);
                 collected += toTake;
-                if (collected >= targetAmount) break;
+                if (collected >= remaining) break;
             }
         }
 
         // Add collected bonemeal to player inventory
         if (collected > 0) {
             player.getInventory().addItem(new ItemStack(Material.BONE_MEAL, collected));
-            bonemealCollectedThisLoop = collected;
+            bonemealCollectedThisLoop += collected;
         }
     }
 

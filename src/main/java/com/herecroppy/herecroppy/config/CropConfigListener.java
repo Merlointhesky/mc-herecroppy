@@ -163,28 +163,28 @@ public class CropConfigListener implements Listener {
     }
 
     private boolean isCropMaterial(Material material) {
-        return material == Material.WHEAT || material == Material.CARROTS ||
-               material == Material.POTATOES || material == Material.BEETROOTS ||
-               material == Material.NETHER_WART || material == Material.SUGAR_CANE ||
-               material == Material.PUMPKIN_STEM || material == Material.MELON_STEM;
+    	return material == Material.WHEAT || material == Material.CARROT ||
+    	       material == Material.POTATO || material == Material.BEETROOT ||
+    	       material == Material.NETHER_WART || material == Material.SUGAR_CANE ||
+    	       material == Material.PUMPKIN || material == Material.MELON;
     }
-
+   
     private boolean isFarmlandCrop(Material cropType) {
-        return cropType == Material.WHEAT || cropType == Material.CARROTS ||
-               cropType == Material.POTATOES || cropType == Material.BEETROOTS;
+    	return cropType == Material.WHEAT || cropType == Material.CARROT ||
+    	       cropType == Material.POTATO || cropType == Material.BEETROOT;
     }
-
+   
     private String getCropName(Material cropType) {
-        return switch (cropType) {
-            case WHEAT -> "Wheat";
-            case CARROTS -> "Carrots";
-            case POTATOES -> "Potatoes";
-            case BEETROOTS -> "Beetroots";
-            case NETHER_WART -> "Nether Wart";
-            case SUGAR_CANE -> "Sugar Cane";
-            case PUMPKIN_STEM -> "Pumpkins";
-            case MELON_STEM -> "Watermelons";
-            default -> cropType.name();
-        };
+    	return switch (cropType) {
+    		case WHEAT -> "Wheat";
+    		case CARROT -> "Carrots";
+    		case POTATO -> "Potatoes";
+    		case BEETROOT -> "Beetroots";
+    		case NETHER_WART -> "Nether Wart";
+    		case SUGAR_CANE -> "Sugar Cane";
+    		case PUMPKIN -> "Pumpkins";
+    		case MELON -> "Watermelons";
+    		default -> cropType.name();
+    	};
     }
 }
