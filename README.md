@@ -71,7 +71,7 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.1.1.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.1.2.jar`.
 
 ## Commands
 
