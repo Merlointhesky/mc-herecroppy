@@ -1,15 +1,11 @@
 package com.herecroppy.herecroppy.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,19 +15,57 @@ public class CropConfigManager {
     private final Plugin plugin;
     private final File configDir;
     private final Map<UUID, PlayerCropConfig> playerConfigs = new HashMap<>();
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public CropConfigManager(Plugin plugin) {
         this.plugin = plugin;
-        this.configDir = new File(plugin.getDataFolder(), "crop-configs");
+        this.configDir = new File(plugin.getDataFolder(), "player-configs");
         if (!configDir.exists()) {
             configDir.mkdirs();
         }
-        loadConfigurations();
     }
 
     public PlayerCropConfig getPlayerConfig(UUID playerId) {
-        return playerConfigs.computeIfAbsent(playerId, k -> new PlayerCropConfig(playerId.toString()));
+        if (!playerConfigs.containsKey(playerId)) {
+            loadPlayerConfig(playerId);
+        }
+        return playerConfigs.get(playerId);
+    }
+
+    public void loadPlayerConfig(UUID playerId) {
+        File file = new File(configDir, playerId + ".yml");
+        PlayerCropConfig config = new PlayerCropConfig(playerId.toString());
+
+        if (file.exists()) {
+            FileConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+            
+            if (yaml.contains("cropSettings")) {
+                org.bukkit.configuration.ConfigurationSection cropSection = yaml.getConfigurationSection("cropSettings");
+                for (String cropName : cropSection.getKeys(false)) {
+                    try {
+                        Material cropType = Material.valueOf(cropName);
+                        org.bukkit.configuration.ConfigurationSection settingsSection = cropSection.getConfigurationSection(cropName);
+                        
+                        boolean seeding = settingsSection.getBoolean("seedingEnabled", true);
+                        boolean collecting = settingsSection.getBoolean("collectingEnabled", true);
+                        boolean bonemeal = settingsSection.getBoolean("bonemealEnabled", false);
+                        boolean junk = settingsSection.getBoolean("junkEnabled", false);
+                        boolean seedDump = settingsSection.getBoolean("seedDumpEnabled", true);
+                        
+                        CropSettings settings = new CropSettings(cropType, seeding, collecting, bonemeal, junk);
+                        settings.setSeedDumpEnabled(seedDump);
+                        config.setCropSettings(cropType, settings);
+                    } catch (IllegalArgumentException e) {
+                        plugin.getLogger().warning("Unknown crop type in config: " + cropName);
+                    }
+                }
+            }
+            
+            if (yaml.contains("lastModified")) {
+                config.setLastModified(yaml.getLong("lastModified"));
+            }
+        }
+
+        playerConfigs.put(playerId, config);
     }
 
     public CropSettings getCropSettings(UUID playerId, Material cropType) {
@@ -95,88 +129,36 @@ public class CropConfigManager {
         saveConfiguration(playerId);
     }
 
-    private void saveConfiguration(UUID playerId) {
+    public void saveConfiguration(UUID playerId) {
         PlayerCropConfig config = playerConfigs.get(playerId);
         if (config == null) return;
 
+        File file = new File(configDir, playerId + ".yml");
+        FileConfiguration yaml = new YamlConfiguration();
+
+        yaml.set("playerId", config.getPlayerId());
+        yaml.set("lastModified", config.getLastModified());
+
+        for (Map.Entry<Material, CropSettings> entry : config.getAllCropSettings().entrySet()) {
+            String path = "cropSettings." + entry.getKey().name();
+            CropSettings settings = entry.getValue();
+            yaml.set(path + ".seedingEnabled", settings.isSeedingEnabled());
+            yaml.set(path + ".collectingEnabled", settings.isCollectingEnabled());
+            yaml.set(path + ".bonemealEnabled", settings.isBonemealEnabled());
+            yaml.set(path + ".junkEnabled", settings.isJunkEnabled());
+            yaml.set(path + ".seedDumpEnabled", settings.isSeedDumpEnabled());
+        }
+
         try {
-            File file = new File(configDir, playerId + ".json");
-            JsonObject json = new JsonObject();
-            json.addProperty("playerId", config.getPlayerId());
-            json.addProperty("lastModified", config.getLastModified());
-
-            JsonObject cropSettingsJson = new JsonObject();
-            for (Map.Entry<Material, CropSettings> entry : config.getAllCropSettings().entrySet()) {
-                CropSettings settings = entry.getValue();
-                JsonObject settingsJson = new JsonObject();
-                settingsJson.addProperty("cropType", settings.getCropType().name());
-                settingsJson.addProperty("seedingEnabled", settings.isSeedingEnabled());
-                settingsJson.addProperty("collectingEnabled", settings.isCollectingEnabled());
-                settingsJson.addProperty("bonemealEnabled", settings.isBonemealEnabled());
-                settingsJson.addProperty("junkEnabled", settings.isJunkEnabled());
-                settingsJson.addProperty("seedDumpEnabled", settings.isSeedDumpEnabled());
-                cropSettingsJson.add(entry.getKey().name(), settingsJson);
-            }
-            json.add("cropSettings", cropSettingsJson);
-
-            try (FileWriter writer = new FileWriter(file)) {
-                gson.toJson(json, writer);
-            }
+            yaml.save(file);
         } catch (IOException e) {
             plugin.getLogger().warning("Failed to save crop configuration for " + playerId + ": " + e.getMessage());
         }
     }
 
-    private void loadConfigurations() {
-        if (!configDir.exists()) return;
-
-        File[] files = configDir.listFiles((dir, name) -> name.endsWith(".json"));
-        if (files == null) return;
-
-        for (File file : files) {
-            try (FileReader reader = new FileReader(file)) {
-                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-                String playerIdStr = json.get("playerId").getAsString();
-                UUID playerId = UUID.fromString(playerIdStr);
-
-                PlayerCropConfig config = new PlayerCropConfig(playerIdStr);
-
-                if (json.has("cropSettings")) {
-                    JsonObject cropSettingsJson = json.getAsJsonObject("cropSettings");
-                    for (String cropName : cropSettingsJson.keySet()) {
-                        try {
-                            Material cropType = Material.valueOf(cropName);
-                            JsonObject settingsJson = cropSettingsJson.getAsJsonObject(cropName);
-                            
-                            boolean seeding = settingsJson.get("seedingEnabled").getAsBoolean();
-                            boolean collecting = settingsJson.get("collectingEnabled").getAsBoolean();
-                            boolean bonemeal = settingsJson.get("bonemealEnabled").getAsBoolean();
-                            boolean junk = settingsJson.has("junkEnabled") ? settingsJson.get("junkEnabled").getAsBoolean() : false;
-                            boolean seedDump = settingsJson.has("seedDumpEnabled") ? settingsJson.get("seedDumpEnabled").getAsBoolean() : true;
-                            
-                            CropSettings settings = new CropSettings(cropType, seeding, collecting, bonemeal, junk);
-                            settings.setSeedDumpEnabled(seedDump);
-                            config.setCropSettings(cropType, settings);
-                        } catch (IllegalArgumentException e) {
-                            plugin.getLogger().warning("Unknown crop type: " + cropName);
-                        }
-                    }
-                }
-
-                if (json.has("lastModified")) {
-                    config.setLastModified(json.get("lastModified").getAsLong());
-                }
-
-                playerConfigs.put(playerId, config);
-            } catch (IOException e) {
-                plugin.getLogger().warning("Failed to load crop configuration from " + file.getName() + ": " + e.getMessage());
-            }
-        }
-    }
-
     public void clearPlayerConfig(UUID playerId) {
         playerConfigs.remove(playerId);
-        File file = new File(configDir, playerId + ".json");
+        File file = new File(configDir, playerId + ".yml");
         if (file.exists()) {
             file.delete();
         }

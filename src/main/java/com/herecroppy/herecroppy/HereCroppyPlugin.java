@@ -40,7 +40,7 @@ public final class HereCroppyPlugin extends JavaPlugin {
         getCommand("herecroppy").setExecutor(new HereCroppyCommand(selectionManager, farmTaskManager, auraSkillsHelper, scanManager, setupWizardCommand, cropConfigUI));
         
         // Register listeners
-        getServer().getPluginManager().registerEvents(new FarmListener(selectionManager, farmTaskManager, scanManager, setupManager), this);
+        getServer().getPluginManager().registerEvents(new FarmListener(selectionManager, farmTaskManager, scanManager, setupManager, cropConfigManager), this);
         getServer().getPluginManager().registerEvents(new SetupWizardListener(setupManager), this);
         getServer().getPluginManager().registerEvents(setupWizardCommand, this);
         getServer().getPluginManager().registerEvents(new CropConfigListener(cropConfigUI, cropConfigManager), this);

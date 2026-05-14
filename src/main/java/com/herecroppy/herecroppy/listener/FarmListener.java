@@ -1,5 +1,6 @@
 package com.herecroppy.herecroppy.listener;
 
+import com.herecroppy.herecroppy.config.CropConfigManager;
 import com.herecroppy.herecroppy.map.ScanManager;
 import com.herecroppy.herecroppy.map.ScanResult;
 import com.herecroppy.herecroppy.selection.SelectionManager;
@@ -14,6 +15,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -24,12 +26,19 @@ public class FarmListener implements Listener {
     private final FarmTaskManager farmTaskManager;
     private final ScanManager scanManager;
     private final SetupManager setupManager;
+    private final CropConfigManager cropConfigManager;
 
-    public FarmListener(SelectionManager selectionManager, FarmTaskManager farmTaskManager, ScanManager scanManager, SetupManager setupManager) {
+    public FarmListener(SelectionManager selectionManager, FarmTaskManager farmTaskManager, ScanManager scanManager, SetupManager setupManager, CropConfigManager cropConfigManager) {
         this.selectionManager = selectionManager;
         this.farmTaskManager = farmTaskManager;
         this.scanManager = scanManager;
         this.setupManager = setupManager;
+        this.cropConfigManager = cropConfigManager;
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        cropConfigManager.loadPlayerConfig(event.getPlayer().getUniqueId());
     }
 
     @EventHandler

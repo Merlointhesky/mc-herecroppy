@@ -799,24 +799,7 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private void depositCropItem(ItemStack item) {
-        SetupConfiguration setup = setupManager.getSetupConfig(player.getUniqueId());
-        if (setup == null) {
-            // No setup configured, add to inventory
-            player.getInventory().addItem(item);
-            return;
-        }
-
-        // Try to deposit in dump keep box
-        Location dumpKeepBox = setup.getDumpKeepBox();
-        if (dumpKeepBox != null) {
-            Block box = dumpKeepBox.getBlock();
-            if (box.getState() instanceof org.bukkit.block.Container container) {
-                container.getInventory().addItem(item);
-                return;
-            }
-        }
-
-        // Fallback to inventory
+        // Add to inventory only. Cleanup/dumping happens when inventory is full.
         player.getInventory().addItem(item);
     }
 
@@ -913,41 +896,33 @@ public class FarmTask extends BukkitRunnable {
             return;
         }
 
-        // List of unwanted crops (all crops except those we want to keep)
-        Material[] unwantedCrops = {
-                Material.WHEAT, Material.CARROT, Material.POTATO, Material.BEETROOT,
-                Material.NETHER_WART, Material.SUGAR_CANE
-        };
-
-        // List of seed items to dump based on configuration
-        Material[] seedItems = {
-                Material.WHEAT_SEEDS, Material.CARROT, Material.POTATO, Material.BEETROOT_SEEDS,
-                Material.NETHER_WART, Material.SUGAR_CANE
-        };
-
         for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getAmount() > 0) {
-                // Check for unwanted crops
-                for (Material unwanted : unwantedCrops) {
-                    if (item.getType() == unwanted) {
-                        ItemStack toMove = item.clone();
-                        container.getInventory().addItem(toMove);
-                        item.setAmount(0);
-                        break;
-                    }
+            if (item == null || item.getAmount() == 0) continue;
+
+            Material type = item.getType();
+            Material configKey = getCropConfigKeyFromItem(type);
+            if (configKey == null) continue;
+
+            boolean shouldDump = false;
+            boolean isSeed = isSeedItem(type);
+
+            if (isSeed) {
+                if (cropConfigManager.isSeedDumpEnabled(player.getUniqueId(), configKey)) {
+                    shouldDump = true;
                 }
-                
-                // Check for seeds to dump
-                for (int i = 0; i < seedItems.length; i++) {
-                    if (item.getType() == seedItems[i]) {
-                        Material cropType = unwantedCrops[i];
-                        if (cropConfigManager.isSeedDumpEnabled(player.getUniqueId(), cropType)) {
-                            ItemStack toMove = item.clone();
-                            container.getInventory().addItem(toMove);
-                            item.setAmount(0);
-                            break;
-                        }
-                    }
+            } else {
+                if (cropConfigManager.isJunkEnabled(player.getUniqueId(), configKey)) {
+                    shouldDump = true;
+                }
+            }
+
+            if (shouldDump) {
+                ItemStack toMove = item.clone();
+                Map<Integer, ItemStack> remaining = container.getInventory().addItem(toMove);
+                if (remaining.isEmpty()) {
+                    item.setAmount(0);
+                } else {
+                    item.setAmount(remaining.get(0).getAmount());
                 }
             }
         }
@@ -964,21 +939,46 @@ public class FarmTask extends BukkitRunnable {
             return;
         }
 
-        // List of keep crops (pumpkins and melons)
-        Material[] keepCrops = {Material.PUMPKIN, Material.MELON};
-
         for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getAmount() > 0) {
-                for (Material keep : keepCrops) {
-                    if (item.getType() == keep) {
-                        ItemStack toMove = item.clone();
-                        container.getInventory().addItem(toMove);
+            if (item == null || item.getAmount() == 0) continue;
+
+            Material type = item.getType();
+            Material configKey = getCropConfigKeyFromItem(type);
+            if (configKey == null) continue;
+
+            boolean isSeed = isSeedItem(type);
+            // Only products (non-seeds) go to the keep box if they are not marked as junk
+            if (!isSeed) {
+                if (!cropConfigManager.isJunkEnabled(player.getUniqueId(), configKey)) {
+                    ItemStack toMove = item.clone();
+                    Map<Integer, ItemStack> remaining = container.getInventory().addItem(toMove);
+                    if (remaining.isEmpty()) {
                         item.setAmount(0);
-                        break;
+                    } else {
+                        item.setAmount(remaining.get(0).getAmount());
                     }
                 }
             }
         }
+    }
+
+    private Material getCropConfigKeyFromItem(Material type) {
+        return switch (type) {
+            case WHEAT, WHEAT_SEEDS -> Material.WHEAT;
+            case CARROT -> Material.CARROT;
+            case POTATO -> Material.POTATO;
+            case BEETROOT, BEETROOT_SEEDS -> Material.BEETROOT;
+            case NETHER_WART -> Material.NETHER_WART;
+            case SUGAR_CANE -> Material.SUGAR_CANE;
+            case PUMPKIN, PUMPKIN_SEEDS -> Material.PUMPKIN;
+            case MELON, MELON_SEEDS -> Material.MELON;
+            default -> null;
+        };
+    }
+
+    private boolean isSeedItem(Material type) {
+        return type == Material.WHEAT_SEEDS || type == Material.BEETROOT_SEEDS ||
+               type == Material.PUMPKIN_SEEDS || type == Material.MELON_SEEDS;
     }
 
     /**
