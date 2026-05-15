@@ -149,16 +149,16 @@ public class FarmTask extends BukkitRunnable {
             // Try to dump and collect before stopping
             if (attemptDumpAndCollect()) {
                 // Successfully dumped/collected, continue farming
+            } else {
+                // If dump/collect failed or not configured, stop
+                sendActivitySummary();
+                cancel();
+                FarmTaskManager manager = plugin.getFarmTaskManager();
+                manager.recordInventoryFullStop(player, currentIndex);
+                player.sendMessage(Component.text("Inventory full! Auto-farm paused. Use /herecroppy restart to resume.")
+                        .color(NamedTextColor.RED));
                 return;
             }
-            // If dump/collect failed or not configured, stop
-            sendActivitySummary();
-            cancel();
-            FarmTaskManager manager = plugin.getFarmTaskManager();
-            manager.recordInventoryFullStop(player, currentIndex);
-            player.sendMessage(Component.text("Inventory full! Auto-farm paused. Use /herecroppy restart to resume.")
-                    .color(NamedTextColor.RED));
-            return;
         }
 
         if (path.isEmpty()) {
@@ -436,22 +436,12 @@ public class FarmTask extends BukkitRunnable {
             // Handle sugar cane specially
             if (cropBlock.getType() == Material.SUGAR_CANE) {
                 harvested = harvestSugarCane(cropBlock);
-            } else if (cropBlock.getBlockData() instanceof Ageable ageable) {
-                // Apply bonemeal if crop is not fully grown
-                if (ageable.getAge() < ageable.getMaximumAge()) {
-                    if (cropConfigManager.isBonemealEnabled(player.getUniqueId(), cropConfigKey) && hasItem(Material.BONE_MEAL)) {
-                        removeOneItem(Material.BONE_MEAL);
-                        bonemealUsedCount++;
-                        cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
-                        // Re-check after bonemeal
-                        if (cropBlock.getBlockData() instanceof Ageable after) {
-                            ageable = after;
-                        }
-                    }
-                }
-
+            } else {
+                // Apply bonemeal if needed
+                attemptBonemeal(cropBlock);
+                
                 // If crop is now fully grown, harvest it (unless it's a pumpkin/melon stem)
-                if (ageable.getAge() == ageable.getMaximumAge()) {
+                if (cropBlock.getBlockData() instanceof Ageable ageable && ageable.getAge() == ageable.getMaximumAge()) {
                     if (cropBlock.getType() != Material.PUMPKIN_STEM && cropBlock.getType() != Material.MELON_STEM) {
                         harvested = processHarvestAndReseed(cropBlock);
                     }
@@ -463,7 +453,10 @@ public class FarmTask extends BukkitRunnable {
         if (harvested) {
             if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
                     && above.getType().isAir()) {
-                tryPlant(ground, above);
+                if (tryPlant(ground, above)) {
+                    // Try to bonemeal the newly planted seed
+                    attemptBonemeal(above);
+                }
             }
         }
 
@@ -478,6 +471,34 @@ public class FarmTask extends BukkitRunnable {
         }
 
         return harvested;
+    }
+
+    private void attemptBonemeal(Block cropBlock) {
+        if (!(cropBlock.getBlockData() instanceof Ageable ageable)) {
+            return;
+        }
+
+        if (ageable.getAge() >= ageable.getMaximumAge()) {
+            return;
+        }
+
+        Material cropConfigKey = getCropConfigKey(cropBlock.getType());
+        if (!cropConfigManager.isBonemealEnabled(player.getUniqueId(), cropConfigKey)) {
+            return;
+        }
+
+        if (!hasItem(Material.BONE_MEAL)) {
+            collectBonemeal();
+        }
+
+        if (hasItem(Material.BONE_MEAL)) {
+            if (cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP)) {
+                removeOneItem(Material.BONE_MEAL);
+                bonemealUsedCount++;
+                player.sendActionBar(Component.text("Used bonemeal on " + formatName(cropConfigKey.name()))
+                        .color(NamedTextColor.YELLOW));
+            }
+        }
     }
 
     /**
@@ -598,12 +619,7 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private boolean hasItem(Material material) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == material && item.getAmount() > 0) {
-                return true;
-            }
-        }
-        return false;
+        return player.getInventory().contains(material);
     }
 
     private void removeOneItem(Material material) {
@@ -800,8 +816,27 @@ public class FarmTask extends BukkitRunnable {
             harvestedCrops.put(type, harvestedCrops.getOrDefault(type, 0) + item.getAmount());
         }
         
-        // Add to inventory only. Cleanup/dumping happens when inventory is full.
-        player.getInventory().addItem(item);
+        // Try to add to inventory
+        Map<Integer, ItemStack> remaining = player.getInventory().addItem(item);
+        
+        // If some items couldn't be added, try to dump and then add again
+        if (!remaining.isEmpty()) {
+            if (attemptDumpAndCollect()) {
+                // Try adding the remainder again
+                for (ItemStack rem : remaining.values()) {
+                    Map<Integer, ItemStack> stillRemaining = player.getInventory().addItem(rem);
+                    // Still can't add, drop them
+                    for (ItemStack dropped : stillRemaining.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), dropped);
+                    }
+                }
+            } else {
+                // No dump setup or dump box full, drop them
+                for (ItemStack rem : remaining.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), rem);
+                }
+            }
+        }
     }
 
     private void collectBonemeal() {
@@ -841,24 +876,6 @@ public class FarmTask extends BukkitRunnable {
             player.getInventory().addItem(new ItemStack(Material.BONE_MEAL, collected));
             bonemealCollectedThisLoop += collected;
         }
-    }
-
-    private void applyBonemealToCrop(Block cropBlock) {
-        Material cropType = cropBlock.getType();
-
-        // Check if bonemeal is enabled for this crop
-        if (!cropConfigManager.isBonemealEnabled(player.getUniqueId(), cropType)) {
-            return;
-        }
-
-        // Check if we have bonemeal
-        if (!hasItem(Material.BONE_MEAL)) {
-            return;
-        }
-
-        // Apply bonemeal
-        removeOneItem(Material.BONE_MEAL);
-        cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
     }
 
     private boolean attemptDumpAndCollect() {

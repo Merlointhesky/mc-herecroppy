@@ -4,6 +4,7 @@ import com.herecroppy.herecroppy.HereCroppyPlugin;
 import com.herecroppy.herecroppy.auraskills.AuraSkillsHelper;
 import com.herecroppy.herecroppy.config.CropConfigUI;
 import com.herecroppy.herecroppy.map.ScanManager;
+import com.herecroppy.herecroppy.map.ScanResult;
 import com.herecroppy.herecroppy.path.PathGenerator;
 import com.herecroppy.herecroppy.selection.SelectionManager;
 import com.herecroppy.herecroppy.task.FarmTask;
@@ -78,32 +79,17 @@ public class HereCroppyCommand implements CommandExecutor {
                 }
 
                 if (!scanManager.hasScan(player.getUniqueId())) {
-                    player.sendMessage(Component.text("Area has not been scanned yet. Please select Point A and Point B first.")
-                            .color(NamedTextColor.RED));
+                    player.sendMessage(Component.text("Scanning area... Please wait.")
+                            .color(NamedTextColor.GREEN));
+                    scanManager.scanAreaAsync(player.getUniqueId(),
+                            selectionManager.getPointA(player.getUniqueId()),
+                            selectionManager.getPointB(player.getUniqueId()),
+                            result -> startFarming(player, result));
                     return true;
                 }
 
-                var scanResult = scanManager.getScanResult(player.getUniqueId());
-                List<Location> path = PathGenerator.generateSafePath(scanResult);
-
-                if (path.isEmpty()) {
-                    player.sendMessage(Component.text("The selected area has no walkable blocks.")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
-
-                FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
-                int startIndex = PathGenerator.findClosestIndex(path, scanResult.getPointB());
-                task.setCurrentIndex(startIndex);
-                farmTaskManager.startTask(player, task);
-                farmTaskManager.clearLastStop(player);
-
-                player.sendMessage(Component.text("Auto-farming enabled! Walking ")
-                        .color(NamedTextColor.GREEN)
-                        .append(Component.text(String.valueOf(path.size())).color(NamedTextColor.YELLOW))
-                        .append(Component.text(" blocks from index ").color(NamedTextColor.GREEN))
-                        .append(Component.text(String.valueOf(startIndex + 1)).color(NamedTextColor.YELLOW))
-                        .append(Component.text(".").color(NamedTextColor.GREEN)));
+                ScanResult scanResult = scanManager.getScanResult(player.getUniqueId());
+                startFarming(player, scanResult);
             }
             case "stop" -> {
                 if (!farmTaskManager.isFarming(player)) {
@@ -122,35 +108,24 @@ public class HereCroppyCommand implements CommandExecutor {
                     return true;
                 }
 
+                if (!selectionManager.hasCompleteSelection(player.getUniqueId())) {
+                    player.sendMessage(Component.text("Selection missing! Please reselect the area.")
+                            .color(NamedTextColor.RED));
+                    return true;
+                }
+
                 if (!scanManager.hasScan(player.getUniqueId())) {
-                    player.sendMessage(Component.text("Area scan is no longer available. Please reselect the area.")
-                            .color(NamedTextColor.RED));
+                    player.sendMessage(Component.text("Scanning area... Please wait.")
+                            .color(NamedTextColor.GREEN));
+                    scanManager.scanAreaAsync(player.getUniqueId(),
+                            selectionManager.getPointA(player.getUniqueId()),
+                            selectionManager.getPointB(player.getUniqueId()),
+                            result -> restartFarming(player, result));
                     return true;
                 }
 
-                var scanResult = scanManager.getScanResult(player.getUniqueId());
-                List<Location> path = PathGenerator.generateSafePath(scanResult);
-
-                if (path.isEmpty()) {
-                    player.sendMessage(Component.text("The selected area has no walkable blocks.")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
-
-                int lastIndex = farmTaskManager.getLastStopIndex(player);
-                FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
-                if (lastIndex >= 0 && lastIndex < path.size()) {
-                    task.setCurrentIndex(lastIndex);
-                }
-                farmTaskManager.startTask(player, task);
-                farmTaskManager.clearLastStop(player);
-
-                player.sendMessage(Component.text("Auto-farming restarted from block ")
-                        .color(NamedTextColor.GREEN)
-                        .append(Component.text(String.valueOf(task.getCurrentIndex() + 1)).color(NamedTextColor.YELLOW))
-                        .append(Component.text(" of ").color(NamedTextColor.GREEN))
-                        .append(Component.text(String.valueOf(path.size())).color(NamedTextColor.YELLOW))
-                        .append(Component.text(".").color(NamedTextColor.GREEN)));
+                ScanResult scanResult = scanManager.getScanResult(player.getUniqueId());
+                restartFarming(player, scanResult);
             }
             case "clear" -> {
                 selectionManager.clearSelection(player.getUniqueId());
@@ -181,5 +156,53 @@ public class HereCroppyCommand implements CommandExecutor {
         }
 
         return true;
+    }
+
+    private void startFarming(Player player, ScanResult scanResult) {
+        List<Location> path = PathGenerator.generateSafePath(scanResult);
+
+        if (path.isEmpty()) {
+            player.sendMessage(Component.text("The selected area has no walkable blocks.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
+        int startIndex = PathGenerator.findClosestIndex(path, scanResult.getPointB());
+        task.setCurrentIndex(startIndex);
+        farmTaskManager.startTask(player, task);
+        farmTaskManager.clearLastStop(player);
+
+        player.sendMessage(Component.text("Auto-farming enabled! Walking ")
+                .color(NamedTextColor.GREEN)
+                .append(Component.text(String.valueOf(path.size())).color(NamedTextColor.YELLOW))
+                .append(Component.text(" blocks from index ").color(NamedTextColor.GREEN))
+                .append(Component.text(String.valueOf(startIndex + 1)).color(NamedTextColor.YELLOW))
+                .append(Component.text(".").color(NamedTextColor.GREEN)));
+    }
+
+    private void restartFarming(Player player, ScanResult scanResult) {
+        List<Location> path = PathGenerator.generateSafePath(scanResult);
+
+        if (path.isEmpty()) {
+            player.sendMessage(Component.text("The selected area has no walkable blocks.")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        int lastIndex = farmTaskManager.getLastStopIndex(player);
+        FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
+        if (lastIndex >= 0 && lastIndex < path.size()) {
+            task.setCurrentIndex(lastIndex);
+        }
+        farmTaskManager.startTask(player, task);
+        farmTaskManager.clearLastStop(player);
+
+        player.sendMessage(Component.text("Auto-farming restarted from block ")
+                .color(NamedTextColor.GREEN)
+                .append(Component.text(String.valueOf(task.getCurrentIndex() + 1)).color(NamedTextColor.YELLOW))
+                .append(Component.text(" of ").color(NamedTextColor.GREEN))
+                .append(Component.text(String.valueOf(path.size())).color(NamedTextColor.YELLOW))
+                .append(Component.text(".").color(NamedTextColor.GREEN)));
     }
 }

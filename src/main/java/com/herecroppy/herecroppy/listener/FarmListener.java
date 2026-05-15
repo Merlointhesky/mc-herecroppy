@@ -107,7 +107,6 @@ public class FarmListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         farmTaskManager.stopTask(player);
-        selectionManager.clearSelection(player.getUniqueId());
         scanManager.clearScan(player.getUniqueId());
     }
 

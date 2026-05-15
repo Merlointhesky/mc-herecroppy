@@ -19,18 +19,26 @@ import org.bukkit.scheduler.BukkitRunnable;
 public final class HereCroppyPlugin extends JavaPlugin {
 
     private static HereCroppyPlugin instance;
-    private final SelectionManager selectionManager = new SelectionManager();
+    private SelectionManager selectionManager;
     private final FarmTaskManager farmTaskManager = new FarmTaskManager();
     private final AuraSkillsHelper auraSkillsHelper = new AuraSkillsHelper();
-    private final ScanManager scanManager = new ScanManager(this);
-    private final SetupManager setupManager = new SetupManager(this);
-    private final CropConfigManager cropConfigManager = new CropConfigManager(this);
-    private final CropConfigUI cropConfigUI = new CropConfigUI(cropConfigManager);
+    private ScanManager scanManager;
+    private SetupManager setupManager;
+    private CropConfigManager cropConfigManager;
+    private CropConfigUI cropConfigUI;
     private SetupWizardCommand setupWizardCommand;
 
     @Override
     public void onEnable() {
         instance = this;
+        
+        // Initialize managers
+        this.selectionManager = new SelectionManager(this);
+        this.scanManager = new ScanManager(this);
+        this.setupManager = new SetupManager(this);
+        this.cropConfigManager = new CropConfigManager(this);
+        this.cropConfigUI = new CropConfigUI(cropConfigManager);
+        
         auraSkillsHelper.init();
         
         // Create setup wizard command
