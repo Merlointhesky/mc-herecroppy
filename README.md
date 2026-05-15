@@ -16,10 +16,11 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 - **Auto-planting** — On empty farmland or soul sand, plugin automatically plants first available seeds from your inventory.
 - **Drop collection** — Automatically collects dropped items after breaking crops.
 - **Inventory full detection** — Automatically stops when your inventory is full and allows restart.
+- **Activity Summary** — Displays a detailed "table" of farming status (crops collected, seeds, bonemeal used, and inventory dumps) instead of individual messages.
 - **Offline cleanup** — Automatically removes players from auto-farming when they disconnect.
 - **Setup Wizard** — Configure optional dump boxes and bonemeal collection with `/herecroppy setup`:
    - **Dump unwanted crops** — Automatically deposit unwanted crops in a designated box.
-   - **Dump keep crops** — Automatically deposit desired crops in a separate storage box.
+   - **Dump keep crops** — Automatically deposit desired crops in a separate storage box (Poisonous Potatoes are always kept).
    - **Bonemeal collection** — Automatically collect and apply bonemeal to crops during farming.
 - **Crop Configuration UI** — Fine-tune farming behavior per crop with `/herecroppy config`:
    - **Enable/disable seeding** — Control which crops are planted.
@@ -71,7 +72,7 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.1.2.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.2.0.jar`.
 
 ## Commands
 
@@ -136,10 +137,10 @@ Fine-tune which crops are seeded, collected, and receive bonemeal:
 
 ## Configuration Files
 
-HereCroppy stores player configurations in JSON files:
+HereCroppy stores player configurations in YAML files:
 
-- **Setup configurations:** `plugins/HereCroppy/setup-configs/{playerId}.json`
-- **Crop configurations:** `plugins/HereCroppy/crop-configs/{playerId}.json`
+- **Setup configurations:** `plugins/HereCroppy/setup-configs/{playerId}.yml`
+- **Crop configurations:** `plugins/HereCroppy/player-configs/{playerId}.yml`
 
 These files are created automatically and can be edited manually if needed.
 
