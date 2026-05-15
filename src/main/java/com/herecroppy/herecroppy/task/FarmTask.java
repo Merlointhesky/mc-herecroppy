@@ -425,17 +425,19 @@ public class FarmTask extends BukkitRunnable {
         // 2. SEED if needed
         if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
                 && above.getType().isAir()) {
-            tryPlant(ground, above);
+            tryPlant(ground, above, null);
         }
 
         // 3. BONEMEAL & 4. COLLECT
         Block cropBlock = findCropBlock(loc);
+        Material justHarvestedType = null;
         if (cropBlock != null && isCrop(cropBlock)) {
             Material cropConfigKey = getCropConfigKey(cropBlock.getType());
             
             // Handle sugar cane specially
             if (cropBlock.getType() == Material.SUGAR_CANE) {
                 harvested = harvestSugarCane(cropBlock);
+                if (harvested) justHarvestedType = Material.SUGAR_CANE;
             } else {
                 // Apply bonemeal if needed
                 attemptBonemeal(cropBlock);
@@ -443,6 +445,7 @@ public class FarmTask extends BukkitRunnable {
                 // If crop is now fully grown, harvest it (unless it's a pumpkin/melon stem)
                 if (cropBlock.getBlockData() instanceof Ageable ageable && ageable.getAge() == ageable.getMaximumAge()) {
                     if (cropBlock.getType() != Material.PUMPKIN_STEM && cropBlock.getType() != Material.MELON_STEM) {
+                        justHarvestedType = cropBlock.getType();
                         harvested = processHarvestAndReseed(cropBlock);
                     }
                 }
@@ -453,7 +456,7 @@ public class FarmTask extends BukkitRunnable {
         if (harvested) {
             if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
                     && above.getType().isAir()) {
-                if (tryPlant(ground, above)) {
+                if (tryPlant(ground, above, justHarvestedType)) {
                     // Try to bonemeal the newly planted seed
                     attemptBonemeal(above);
                 }
@@ -681,67 +684,49 @@ public class FarmTask extends BukkitRunnable {
         return true;
     }
 
-    private boolean tryPlant(Block ground, Block above) {
+    private boolean tryPlant(Block ground, Block above, Material preferredCropBlockType) {
         boolean isSoulSand = ground.getType() == Material.SOUL_SAND;
         boolean isFarmland = ground.getType() == Material.FARMLAND;
 
-        // Array of: {seedItem, configKey, cropBlockMaterial}
-        Object[][] seedPriority = {
-                {Material.WHEAT_SEEDS, Material.WHEAT, Material.WHEAT},
-                {Material.CARROT, Material.CARROT, Material.CARROTS},
-                {Material.POTATO, Material.POTATO, Material.POTATOES},
-                {Material.BEETROOT_SEEDS, Material.BEETROOT, Material.BEETROOTS},
-                {Material.NETHER_WART, Material.NETHER_WART, Material.NETHER_WART},
-                {Material.PUMPKIN_SEEDS, Material.PUMPKIN, Material.PUMPKIN_STEM},
-                {Material.MELON_SEEDS, Material.MELON, Material.MELON_STEM},
-                {Material.SUGAR_CANE, Material.SUGAR_CANE, Material.SUGAR_CANE}
-        };
+        com.herecroppy.herecroppy.config.PlayerCropConfig config = cropConfigManager.getPlayerConfig(player.getUniqueId());
+        List<Material> priority = config.getSeedingPriority();
 
-        for (Object[] entry : seedPriority) {
-            Material seedType = (Material) entry[0];
-            Material configKey = (Material) entry[1];
-            Material cropBlockType = (Material) entry[2];
+        // 1. Try preferred crop first
+        if (preferredCropBlockType != null) {
+            Material configKey = getCropConfigKey(preferredCropBlockType);
+            if (tryPlantSpecific(configKey, ground, above, isSoulSand, isFarmland)) {
+                return true;
+            }
+        }
 
-            // Check if seeding is enabled for this crop
-            if (!cropConfigManager.isSeedingEnabled(player.getUniqueId(), configKey)) {
+        // 2. Try priority list
+        for (Material configKey : priority) {
+            // Skip preferred if we already tried it
+            if (preferredCropBlockType != null && configKey == getCropConfigKey(preferredCropBlockType)) {
                 continue;
             }
-
-            // Nether Wart only on Soul Sand
-            if (configKey == Material.NETHER_WART && !isSoulSand) continue;
-            if (configKey == Material.NETHER_WART && isSoulSand) {
-                if (hasItem(seedType)) {
-                    removeOneItem(seedType);
-                    above.setType(cropBlockType);
-                    if (above.getBlockData() instanceof Ageable ageable) {
-                        ageable.setAge(0);
-                        above.setBlockData(ageable);
-                    }
-                    return true;
-                }
-                continue;
+            if (tryPlantSpecific(configKey, ground, above, isSoulSand, isFarmland)) {
+                return true;
             }
+        }
 
-            // Sugar Cane only on dirt/grass adjacent to water
-            if (configKey == Material.SUGAR_CANE) {
-                if (isSoulSand) continue; // Skip if on soul sand
-                if (!isFarmland && !isTillable(ground)) continue; // Must be on dirt-like or farmland
-                if (!isAdjacentToWater(ground)) continue; // Must be adjacent to water
-                if (hasItem(seedType)) {
-                    removeOneItem(seedType);
-                    above.setType(cropBlockType);
-                    return true;
-                }
-                continue;
-            }
+        return false;
+    }
 
-            // Pumpkin and Melon stems only on farmland
-            if ((configKey == Material.PUMPKIN || configKey == Material.MELON) && !isFarmland) continue;
-         
-            // Regular crops (wheat, carrots, potatoes, beetroots) only on farmland
-            if ((configKey == Material.WHEAT || configKey == Material.CARROT ||
-                 configKey == Material.POTATO || configKey == Material.BEETROOT) && !isFarmland) continue;
+    private boolean tryPlantSpecific(Material configKey, Block ground, Block above, boolean isSoulSand, boolean isFarmland) {
+        // Check if seeding is enabled for this crop
+        if (!cropConfigManager.isSeedingEnabled(player.getUniqueId(), configKey)) {
+            return false;
+        }
 
+        Material cropBlockType = getCropBlockType(configKey);
+        Material seedType = getSeedItemForCrop(cropBlockType);
+
+        if (seedType == null) return false;
+
+        // Nether Wart only on Soul Sand
+        if (configKey == Material.NETHER_WART) {
+            if (!isSoulSand) return false;
             if (hasItem(seedType)) {
                 removeOneItem(seedType);
                 above.setType(cropBlockType);
@@ -751,8 +736,53 @@ public class FarmTask extends BukkitRunnable {
                 }
                 return true;
             }
+            return false;
+        }
+
+        // Sugar Cane only on dirt/grass adjacent to water
+        if (configKey == Material.SUGAR_CANE) {
+            if (isSoulSand) return false;
+            if (!isFarmland && !isTillable(ground)) return false;
+            if (!isAdjacentToWater(ground)) return false;
+            if (hasItem(seedType)) {
+                removeOneItem(seedType);
+                above.setType(cropBlockType);
+                return true;
+            }
+            return false;
+        }
+
+        // Pumpkin and Melon stems only on farmland
+        if ((configKey == Material.PUMPKIN || configKey == Material.MELON) && !isFarmland) return false;
+
+        // Regular crops (wheat, carrots, potatoes, beetroots) only on farmland
+        if ((configKey == Material.WHEAT || configKey == Material.CARROT ||
+                configKey == Material.POTATO || configKey == Material.BEETROOT) && !isFarmland) return false;
+
+        if (hasItem(seedType)) {
+            removeOneItem(seedType);
+            above.setType(cropBlockType);
+            if (above.getBlockData() instanceof Ageable ageable) {
+                ageable.setAge(0);
+                above.setBlockData(ageable);
+            }
+            return true;
         }
         return false;
+    }
+
+    private Material getCropBlockType(Material configKey) {
+        return switch (configKey) {
+            case WHEAT -> Material.WHEAT;
+            case CARROT -> Material.CARROTS;
+            case POTATO -> Material.POTATOES;
+            case BEETROOT -> Material.BEETROOTS;
+            case NETHER_WART -> Material.NETHER_WART;
+            case SUGAR_CANE -> Material.SUGAR_CANE;
+            case PUMPKIN -> Material.PUMPKIN_STEM;
+            case MELON -> Material.MELON_STEM;
+            default -> configKey;
+        };
     }
 
     private boolean tryTill(Block ground) {

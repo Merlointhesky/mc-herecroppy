@@ -50,6 +50,8 @@ public class CropConfigListener implements Listener {
 
         if (titleStr.contains("Crop Categories")) {
             handleCategoryMenuClick(player, clicked, event.getSlot());
+        } else if (titleStr.contains("Seeding Priority")) {
+            handlePriorityMenuClick(player, clicked, event.getSlot(), event.isLeftClick());
         } else if (titleStr.contains("Farmland Crops")) {
             handleFarmlandMenuClick(player, clicked, event.getSlot());
         } else if (titleStr.contains("Special Crops")) {
@@ -66,6 +68,10 @@ public class CropConfigListener implements Listener {
         if (material == Material.WHEAT || slot == 11) {
             configUI.openFarmlandCropsMenu(player);
         }
+        // Check for Seeding Priority (slot 13)
+        else if (material == Material.WHEAT_SEEDS || slot == 13) {
+            configUI.openPriorityMenu(player);
+        }
         // Check for Special Crops (slot 15)
         else if (material == Material.NETHER_WART || slot == 15) {
             configUI.openSpecialCropsMenu(player);
@@ -73,6 +79,40 @@ public class CropConfigListener implements Listener {
         // Back/Close button
         else if (material == Material.ARROW) {
             player.closeInventory();
+        }
+    }
+
+    private void handlePriorityMenuClick(Player player, ItemStack clicked, int slot, boolean isLeftClick) {
+        Material material = clicked.getType();
+
+        if (material == Material.ARROW || slot == 26) {
+            configUI.openCategoryMenu(player);
+            return;
+        }
+
+        int priorityIndex = slot - 10;
+        PlayerCropConfig config = configManager.getPlayerConfig(player.getUniqueId());
+        java.util.List<Material> priority = config.getSeedingPriority();
+
+        if (priorityIndex >= 0 && priorityIndex < priority.size()) {
+            if (isLeftClick) {
+                // Move up
+                if (priorityIndex > 0) {
+                    Material temp = priority.get(priorityIndex);
+                    priority.set(priorityIndex, priority.get(priorityIndex - 1));
+                    priority.set(priorityIndex - 1, temp);
+                }
+            } else {
+                // Move down
+                if (priorityIndex < priority.size() - 1) {
+                    Material temp = priority.get(priorityIndex);
+                    priority.set(priorityIndex, priority.get(priorityIndex + 1));
+                    priority.set(priorityIndex + 1, temp);
+                }
+            }
+            config.setSeedingPriority(priority);
+            configManager.saveConfiguration(player.getUniqueId());
+            configUI.openPriorityMenu(player);
         }
     }
 

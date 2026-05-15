@@ -7,9 +7,12 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class CropConfigManager {
     private final Plugin plugin;
@@ -57,6 +60,19 @@ public class CropConfigManager {
                     } catch (IllegalArgumentException e) {
                         plugin.getLogger().warning("Unknown crop type in config: " + cropName);
                     }
+                }
+            }
+            
+            if (yaml.contains("seedingPriority")) {
+                List<String> priorityNames = yaml.getStringList("seedingPriority");
+                List<Material> priority = new ArrayList<>();
+                for (String name : priorityNames) {
+                    try {
+                        priority.add(Material.valueOf(name));
+                    } catch (IllegalArgumentException ignored) {}
+                }
+                if (!priority.isEmpty()) {
+                    config.setSeedingPriority(priority);
                 }
             }
             
@@ -138,6 +154,7 @@ public class CropConfigManager {
 
         yaml.set("playerId", config.getPlayerId());
         yaml.set("lastModified", config.getLastModified());
+        yaml.set("seedingPriority", config.getSeedingPriority().stream().map(Material::name).collect(Collectors.toList()));
 
         for (Map.Entry<Material, CropSettings> entry : config.getAllCropSettings().entrySet()) {
             String path = "cropSettings." + entry.getKey().name();

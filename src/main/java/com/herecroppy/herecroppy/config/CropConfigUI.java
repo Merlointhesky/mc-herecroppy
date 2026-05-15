@@ -19,6 +19,7 @@ public class CropConfigUI {
     private static final String CATEGORY_MENU_TITLE = "HereCroppy - Crop Categories";
     private static final String FARMLAND_MENU_TITLE = "HereCroppy - Farmland Crops";
     private static final String SPECIAL_MENU_TITLE = "HereCroppy - Special Crops";
+    private static final String PRIORITY_MENU_TITLE = "HereCroppy - Seeding Priority";
     private static final String SETTINGS_MENU_TITLE = "HereCroppy - Crop Settings";
 
     public CropConfigUI(CropConfigManager configManager) {
@@ -34,12 +35,60 @@ public class CropConfigUI {
                 "Wheat, Carrots, Potatoes, Beetroots");
         inventory.setItem(11, farmlandItem);
 
+        // Seeding Priority
+        ItemStack priorityItem = createCategoryItem(Material.WHEAT_SEEDS, "Seeding Priority",
+                "Change the order of seeds used for replanting");
+        inventory.setItem(13, priorityItem);
+
         // Special Crops
         ItemStack specialItem = createCategoryItem(Material.NETHER_WART, "Special Crops",
                 "Nether Wart, Sugar Cane, Pumpkins, Watermelons");
         inventory.setItem(15, specialItem);
 
         player.openInventory(inventory);
+    }
+
+    public void openPriorityMenu(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 27, Component.text(PRIORITY_MENU_TITLE)
+                .color(NamedTextColor.GOLD));
+
+        PlayerCropConfig config = configManager.getPlayerConfig(player.getUniqueId());
+        List<Material> priority = config.getSeedingPriority();
+
+        for (int i = 0; i < priority.size(); i++) {
+            Material material = priority.get(i);
+            ItemStack item = new ItemStack(getSeedMaterial(material));
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.displayName(Component.text((i + 1) + ". " + getCropDisplayName(material))
+                        .color(NamedTextColor.YELLOW)
+                        .decorate(TextDecoration.BOLD));
+                
+                List<Component> lore = new ArrayList<>();
+                lore.add(Component.text("Left-click to move UP").color(NamedTextColor.GRAY));
+                lore.add(Component.text("Right-click to move DOWN").color(NamedTextColor.GRAY));
+                
+                meta.lore(lore);
+                item.setItemMeta(meta);
+            }
+            inventory.setItem(10 + i, item);
+        }
+
+        // Back button
+        ItemStack backItem = createNavigationItem(Material.ARROW, "Back to Categories");
+        inventory.setItem(26, backItem);
+
+        player.openInventory(inventory);
+    }
+
+    private Material getSeedMaterial(Material crop) {
+        return switch (crop) {
+            case WHEAT -> Material.WHEAT_SEEDS;
+            case BEETROOT -> Material.BEETROOT_SEEDS;
+            case PUMPKIN -> Material.PUMPKIN_SEEDS;
+            case MELON -> Material.MELON_SEEDS;
+            default -> crop;
+        };
     }
 
     public void openFarmlandCropsMenu(Player player) {

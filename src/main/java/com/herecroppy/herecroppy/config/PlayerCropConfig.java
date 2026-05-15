@@ -2,17 +2,21 @@ package com.herecroppy.herecroppy.config;
 
 import org.bukkit.Material;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PlayerCropConfig {
     private final String playerId;
     private final Map<Material, CropSettings> cropSettings;
+    private List<Material> seedingPriority;
     private long lastModified;
 
     public PlayerCropConfig(String playerId) {
         this.playerId = playerId;
         this.cropSettings = new HashMap<>();
+        this.seedingPriority = new ArrayList<>();
         this.lastModified = System.currentTimeMillis();
         initializeDefaults();
     }
@@ -29,6 +33,16 @@ public class PlayerCropConfig {
     	cropSettings.put(Material.SUGAR_CANE, new CropSettings(Material.SUGAR_CANE, true, true, false));
     	cropSettings.put(Material.PUMPKIN, new CropSettings(Material.PUMPKIN, false, true, true));
     	cropSettings.put(Material.MELON, new CropSettings(Material.MELON, false, true, true));
+
+        // Default seeding priority
+        seedingPriority.clear();
+        seedingPriority.add(Material.NETHER_WART);
+        seedingPriority.add(Material.WHEAT);
+        seedingPriority.add(Material.CARROT);
+        seedingPriority.add(Material.POTATO);
+        seedingPriority.add(Material.BEETROOT);
+        seedingPriority.add(Material.PUMPKIN);
+        seedingPriority.add(Material.MELON);
     }
 
     public String getPlayerId() {
@@ -91,6 +105,15 @@ public class PlayerCropConfig {
     public void resetToDefaults() {
         cropSettings.clear();
         initializeDefaults();
+        this.lastModified = System.currentTimeMillis();
+    }
+
+    public List<Material> getSeedingPriority() {
+        return new ArrayList<>(seedingPriority);
+    }
+
+    public void setSeedingPriority(List<Material> priority) {
+        this.seedingPriority = new ArrayList<>(priority);
         this.lastModified = System.currentTimeMillis();
     }
 

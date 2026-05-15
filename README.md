@@ -12,6 +12,8 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 - **Rescan on loop** — After completing a full loop, the area is rescanned to detect new obstacles or changes.
 - **Ripe crop detection** — Detects and harvests fully grown crops (Wheat, Carrots, Potatoes, Beetroots, Nether Wart, Sugar Cane, Pumpkins, Watermelons).
 - **Automatic replanting** — Replants crops immediately after harvesting using seeds from your inventory.
+- **Smart Replanting** — Automatically tries to replant the same crop type that was just harvested before falling back to the seeding priority list.
+- **Seeding Priority** — Define the order of seeds used for replanting via the `/herecroppy config` menu.
 - **Auto-tilling** — If your selected area contains untilled dirt or grass, plugin uses your held hoe to prepare it into farmland.
 - **Auto-planting** — On empty farmland or soul sand, plugin automatically plants first available seeds from your inventory.
 - **Drop collection** — Automatically collects dropped items after breaking crops.
@@ -27,6 +29,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
    - **Enable/disable collecting** — Control which crops are harvested.
    - **Enable/disable bonemeal** — Control which crops receive bonemeal.
    - **Enable/disable seed dumping** — Control which seeds are dumped to storage (default: dump all seeds).
+   - **Seeding Priority** — Reorder the priority of crops to be planted.
 - **Smart Bonemeal Usage** — Bonemeal is automatically collected and applied to unripe crops to speed up growth (respects per-crop configuration).
 - **Proper Pumpkin/Watermelon Harvesting** — Collects fruit blocks without breaking stems, allowing continuous production.
 - **Correct Sugar Cane Harvesting** — Breaks sugar cane at height 2 above ground, leaving 1 block to regrow naturally.
@@ -72,7 +75,7 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.2.0.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.2.1.jar`.
 
 ## Commands
 
@@ -129,7 +132,10 @@ Fine-tune which crops are seeded, collected, and receive bonemeal:
    - **Seeding** — Whether to plant this crop
    - **Collecting** — Whether to harvest this crop
    - **Bonemeal** — Whether to apply bonemeal to this crop
-5. Click "Back" to return to the crop list or "Close" to exit.
+5. In the main `/herecroppy config` menu, click **Seeding Priority** to reorder which seeds are used first when multiple types are available.
+   - Left-click to move a crop UP in priority.
+   - Right-click to move a crop DOWN in priority.
+6. Click "Back" to return to the crop list or "Close" to exit.
 
 **Default Settings:**
 - All crops: Seeding and Collecting enabled
