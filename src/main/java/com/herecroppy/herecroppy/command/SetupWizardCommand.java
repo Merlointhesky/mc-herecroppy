@@ -66,6 +66,27 @@ public class SetupWizardCommand implements CommandExecutor, Listener {
             return true;
         }
 
+        // Handle bonemeal subcommand from /herecroppy setup bonemeal [nn]
+        if (args.length > 2 && args[1].equalsIgnoreCase("bonemeal")) {
+            try {
+                int amount = Integer.parseInt(args[2]);
+                if (amount < 0) {
+                    player.sendMessage(Component.text("Please enter a non-negative number.")
+                            .color(NamedTextColor.RED));
+                    return true;
+                }
+
+                setupManager.updateBonemealAmount(player.getUniqueId(), amount);
+                player.sendMessage(Component.text("Bonemeal per loop set to: ")
+                        .color(NamedTextColor.GREEN)
+                        .append(Component.text(amount).color(NamedTextColor.YELLOW)));
+            } catch (NumberFormatException e) {
+                player.sendMessage(Component.text("Please enter a valid number.")
+                        .color(NamedTextColor.RED));
+            }
+            return true;
+        }
+
         if (setupManager.isInSetup(player.getUniqueId())) {
             player.sendMessage(Component.text("You are already in setup mode! Type 'cancel' to abort or continue with the setup.")
                     .color(NamedTextColor.YELLOW));

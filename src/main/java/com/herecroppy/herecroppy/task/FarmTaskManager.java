@@ -20,6 +20,7 @@ public class FarmTaskManager {
     public void stopTask(Player player) {
         FarmTask task = activeTasks.remove(player.getUniqueId());
         if (task != null) {
+            recordInventoryFullStop(player, task.getCurrentIndex());
             task.sendActivitySummary();
             task.cancel();
         }

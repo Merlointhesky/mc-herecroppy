@@ -333,7 +333,7 @@ public class FarmTask extends BukkitRunnable {
                     if (block.getType() == blockType) {
                         // Harvest the pumpkin/melon block
                         if (cropConfigManager.isCollectingEnabled(player.getUniqueId(), blockType)) {
-                            auraSkillsHelper.addFarmingXp(player, CROP_XP_MAP.getOrDefault(blockType, BASE_HARVEST_XP));
+                            awardExperience(blockType, block.getLocation());
                             int dropMultiplier = calculateDropMultiplier();
                             
                             // Collect as whole block instead of breaking (which would split melons into slices)
@@ -400,6 +400,19 @@ public class FarmTask extends BukkitRunnable {
                 block.setBlockData(openable);
             }
             passagesOpenedByBot.remove(key);
+        }
+    }
+
+    private void awardExperience(Material cropType, Location location) {
+        double auraXp = CROP_XP_MAP.getOrDefault(cropType, BASE_HARVEST_XP);
+        auraSkillsHelper.addFarmingXp(player, auraXp);
+        
+        // Award a small amount of Minecraft XP to support Mending and standard leveling
+        int mcXp = (int) (auraXp / 5.0); // 2 XP for 10 AuraXp, etc.
+        if (mcXp > 0) {
+            location.getWorld().spawn(location.clone().add(0.5, 0.5, 0.5), org.bukkit.entity.ExperienceOrb.class, orb -> {
+                orb.setExperience(mcXp);
+            });
         }
     }
 
@@ -518,8 +531,8 @@ public class FarmTask extends BukkitRunnable {
             return false;
         }
 
-        // Award AuraSkills XP
-        auraSkillsHelper.addFarmingXp(player, CROP_XP_MAP.getOrDefault(cropBlockType, BASE_HARVEST_XP));
+        // Award AuraSkills and Minecraft XP
+        awardExperience(cropBlockType, cropBlock.getLocation());
 
         // Apply fortune/double drops
         int dropMultiplier = calculateDropMultiplier();
@@ -626,12 +639,25 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private void removeOneItem(Material material) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == material && item.getAmount() > 0) {
-                item.setAmount(item.getAmount() - 1);
-                return;
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE) return;
+
+        ItemStack toRemove = new ItemStack(material, 1);
+        // Try removing from main inventory storage slots (0-35)
+        Map<Integer, ItemStack> remaining = player.getInventory().removeItem(toRemove);
+
+        // If not found in main storage, check offhand explicitly
+        if (!remaining.isEmpty()) {
+            ItemStack offhand = player.getInventory().getItemInOffHand();
+            if (offhand != null && offhand.getType() == material && offhand.getAmount() > 0) {
+                offhand.setAmount(offhand.getAmount() - 1);
+                if (offhand.getAmount() <= 0) {
+                    player.getInventory().setItemInOffHand(null);
+                } else {
+                    player.getInventory().setItemInOffHand(offhand);
+                }
             }
         }
+        player.updateInventory();
     }
 
     private String formatName(String materialName) {
@@ -645,8 +671,8 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private boolean harvestSugarCane(Block cropBlock) {
-        // Award AuraSkills XP
-        auraSkillsHelper.addFarmingXp(player, CROP_XP_MAP.getOrDefault(Material.SUGAR_CANE, BASE_HARVEST_XP));
+        // Award AuraSkills and Minecraft XP
+        awardExperience(Material.SUGAR_CANE, cropBlock.getLocation());
 
         // Apply fortune/double drops
         int dropMultiplier = calculateDropMultiplier();

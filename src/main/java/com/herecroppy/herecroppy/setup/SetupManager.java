@@ -60,6 +60,16 @@ public class SetupManager {
         setupSteps.put(playerId, 3);
     }
 
+    public void updateBonemealAmount(UUID playerId, int amount) {
+        SetupConfiguration config = getSetupConfig(playerId);
+        if (config == null) {
+            config = new SetupConfiguration(playerId.toString());
+            configurations.put(playerId, config);
+        }
+        config.setBonemealPerLoop(amount);
+        saveConfiguration(playerId);
+    }
+
     public void setBonemealPerLoop(UUID playerId, int amount) {
         if (!isInSetup(playerId)) return;
         SetupConfiguration config = configurations.get(playerId);

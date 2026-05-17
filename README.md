@@ -75,7 +75,13 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.2.1.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.2.2.jar`.
+
+## Recent Changes (v1.2.2)
+
+- **Fixed bonemeal consumption** — Bonemeal is now correctly removed from inventory (including offhand) when applied to crops.
+- **Fixed XP rewards** — Minecraft experience orbs are now correctly spawned at the harvested block's location.
+- **Improved XP visibility** — Experience orbs are now centered on the block for better visibility.
 
 ## Commands
 
