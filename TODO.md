@@ -1,2 +1,2 @@
 ### TODO LIST
-- cleanup debug log lines.
+- [x] cleanup debug log lines.
