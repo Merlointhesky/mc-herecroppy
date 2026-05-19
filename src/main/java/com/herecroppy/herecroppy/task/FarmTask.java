@@ -438,7 +438,10 @@ public class FarmTask extends BukkitRunnable {
         // 2. SEED if needed
         if ((ground.getType() == Material.FARMLAND || ground.getType() == Material.SOUL_SAND)
                 && above.getType().isAir()) {
-            tryPlant(ground, above, null);
+            if (tryPlant(ground, above, null)) {
+                // Try to bonemeal the newly planted seed
+                attemptBonemeal(above);
+            }
         }
 
         // 3. BONEMEAL & 4. COLLECT
@@ -908,9 +911,18 @@ public class FarmTask extends BukkitRunnable {
         }
 
         int targetAmount = setup.getBonemealPerLoop();
-        int remaining = targetAmount - bonemealCollectedThisLoop;
         
-        // Only collect if we haven't reached the per-loop limit
+        // If we are out of bonemeal we can pick up some immediately rather than wait (if there is space)
+        boolean isEmergency = !hasItem(Material.BONE_MEAL);
+        
+        int remaining;
+        if (isEmergency) {
+            // Emergency: allow refilling up to at least 64 or targetAmount
+            remaining = Math.max(64, targetAmount);
+        } else {
+            remaining = targetAmount - bonemealCollectedThisLoop;
+        }
+        
         if (remaining <= 0) {
             return;
         }
@@ -921,15 +933,26 @@ public class FarmTask extends BukkitRunnable {
         for (ItemStack item : container.getInventory().getContents()) {
             if (item != null && item.getType() == Material.BONE_MEAL && collected < remaining) {
                 int toTake = Math.min(item.getAmount(), remaining - collected);
-                item.setAmount(item.getAmount() - toTake);
-                collected += toTake;
+                
+                // Check if it fits in inventory
+                ItemStack testStack = new ItemStack(Material.BONE_MEAL, toTake);
+                Map<Integer, ItemStack> remainingAfterAdd = player.getInventory().addItem(testStack);
+                
+                int actuallyTaken = toTake;
+                if (!remainingAfterAdd.isEmpty()) {
+                    int notAdded = remainingAfterAdd.values().iterator().next().getAmount();
+                    actuallyTaken = toTake - notAdded;
+                    if (actuallyTaken <= 0) break; // Inventory full
+                }
+                
+                // Successfully added 'actuallyTaken' to inventory, now remove from container
+                item.setAmount(item.getAmount() - actuallyTaken);
+                collected += actuallyTaken;
                 if (collected >= remaining) break;
             }
         }
 
-        // Add collected bonemeal to player inventory
         if (collected > 0) {
-            player.getInventory().addItem(new ItemStack(Material.BONE_MEAL, collected));
             bonemealCollectedThisLoop += collected;
         }
     }
