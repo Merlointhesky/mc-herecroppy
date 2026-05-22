@@ -511,7 +511,15 @@ public class FarmTask extends BukkitRunnable {
         }
 
         if (hasItem(Material.BONE_MEAL)) {
-            if (cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP)) {
+            int ageBefore = ageable.getAge();
+            boolean applied = cropBlock.applyBoneMeal(org.bukkit.block.BlockFace.UP);
+            
+            int ageAfter = ageBefore;
+            if (cropBlock.getBlockData() instanceof Ageable newAgeable) {
+                ageAfter = newAgeable.getAge();
+            }
+
+            if (applied || ageAfter > ageBefore) {
                 removeOneItem(Material.BONE_MEAL);
                 bonemealUsedCount++;
                 player.sendActionBar(Component.text("Used bonemeal on " + formatName(cropConfigKey.name()))
@@ -638,29 +646,43 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private boolean hasItem(Material material) {
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        if (offHand != null && offHand.getType() == material && offHand.getAmount() > 0) {
+            return true;
+        }
         return player.getInventory().contains(material);
     }
 
     private void removeOneItem(Material material) {
         if (player.getGameMode() == org.bukkit.GameMode.CREATIVE) return;
 
-        ItemStack toRemove = new ItemStack(material, 1);
-        // Try removing from main inventory storage slots (0-35)
-        Map<Integer, ItemStack> remaining = player.getInventory().removeItem(toRemove);
+        // 1. Check off-hand first (common for bonemeal and seeds)
+        ItemStack offHandItem = player.getInventory().getItemInOffHand();
+        if (offHandItem != null && offHandItem.getType() == material && offHandItem.getAmount() > 0) {
+            offHandItem.setAmount(offHandItem.getAmount() - 1);
+            if (offHandItem.getAmount() <= 0) {
+                player.getInventory().setItemInOffHand(null);
+            } else {
+                player.getInventory().setItemInOffHand(offHandItem);
+            }
+            player.updateInventory();
+            return;
+        }
 
-        // If not found in main storage, check offhand explicitly
-        if (!remaining.isEmpty()) {
-            ItemStack offhand = player.getInventory().getItemInOffHand();
-            if (offhand != null && offhand.getType() == material && offhand.getAmount() > 0) {
-                offhand.setAmount(offhand.getAmount() - 1);
-                if (offhand.getAmount() <= 0) {
-                    player.getInventory().setItemInOffHand(null);
+        // 2. Check main inventory slots (0-35)
+        for (int i = 0; i < 36; i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (item != null && item.getType() == material && item.getAmount() > 0) {
+                item.setAmount(item.getAmount() - 1);
+                if (item.getAmount() <= 0) {
+                    player.getInventory().setItem(i, null);
                 } else {
-                    player.getInventory().setItemInOffHand(offhand);
+                    player.getInventory().setItem(i, item);
                 }
+                player.updateInventory();
+                return;
             }
         }
-        player.updateInventory();
     }
 
     private String formatName(String materialName) {
@@ -930,7 +952,8 @@ public class FarmTask extends BukkitRunnable {
         int collected = 0;
 
         // Collect bonemeal from the box up to the remaining amount
-        for (ItemStack item : container.getInventory().getContents()) {
+        for (int i = 0; i < container.getInventory().getSize(); i++) {
+            ItemStack item = container.getInventory().getItem(i);
             if (item != null && item.getType() == Material.BONE_MEAL && collected < remaining) {
                 int toTake = Math.min(item.getAmount(), remaining - collected);
                 
@@ -947,6 +970,11 @@ public class FarmTask extends BukkitRunnable {
                 
                 // Successfully added 'actuallyTaken' to inventory, now remove from container
                 item.setAmount(item.getAmount() - actuallyTaken);
+                if (item.getAmount() <= 0) {
+                    container.getInventory().setItem(i, null);
+                } else {
+                    container.getInventory().setItem(i, item);
+                }
                 collected += actuallyTaken;
                 if (collected >= remaining) break;
             }
@@ -968,6 +996,8 @@ public class FarmTask extends BukkitRunnable {
 
         // Dump keep crops
         dumpKeepCrops(setup);
+        
+        player.updateInventory();
 
         inventoryEmptyCount++;
 
@@ -995,7 +1025,8 @@ public class FarmTask extends BukkitRunnable {
             return;
         }
 
-        for (ItemStack item : player.getInventory().getContents()) {
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
             if (item == null || item.getAmount() == 0) continue;
 
             Material type = item.getType();
@@ -1019,9 +1050,10 @@ public class FarmTask extends BukkitRunnable {
                 ItemStack toMove = item.clone();
                 Map<Integer, ItemStack> remaining = container.getInventory().addItem(toMove);
                 if (remaining.isEmpty()) {
-                    item.setAmount(0);
+                    player.getInventory().setItem(i, null);
                 } else {
                     item.setAmount(remaining.get(0).getAmount());
+                    player.getInventory().setItem(i, item);
                 }
             }
         }
@@ -1038,7 +1070,8 @@ public class FarmTask extends BukkitRunnable {
             return;
         }
 
-        for (ItemStack item : player.getInventory().getContents()) {
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
             if (item == null || item.getAmount() == 0) continue;
 
             Material type = item.getType();
@@ -1048,9 +1081,10 @@ public class FarmTask extends BukkitRunnable {
                 ItemStack toMove = item.clone();
                 Map<Integer, ItemStack> remaining = container.getInventory().addItem(toMove);
                 if (remaining.isEmpty()) {
-                    item.setAmount(0);
+                    player.getInventory().setItem(i, null);
                 } else {
                     item.setAmount(remaining.get(0).getAmount());
+                    player.getInventory().setItem(i, item);
                 }
                 continue;
             }
@@ -1065,9 +1099,10 @@ public class FarmTask extends BukkitRunnable {
                     ItemStack toMove = item.clone();
                     Map<Integer, ItemStack> remaining = container.getInventory().addItem(toMove);
                     if (remaining.isEmpty()) {
-                        item.setAmount(0);
+                        player.getInventory().setItem(i, null);
                     } else {
                         item.setAmount(remaining.get(0).getAmount());
+                        player.getInventory().setItem(i, item);
                     }
                 }
             }

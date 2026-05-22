@@ -75,7 +75,13 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.2.2.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.2.3.jar`.
+
+## Recent Changes (v1.2.3)
+
+- **Fixed Off-hand Bonemeal Consumption** — Bonemeal in the player's off-hand (or main hand/hotbar slots) is now robustly detected and subtracted upon application to crops, fixing a bug where bonemeal could be used infinitely without being consumed.
+- **Robust Crop Age Verification** — Bonemeal is only consumed when successfully applied to crops that are actually eligible for growth (i.e. not fully grown).
+- **Added command alias `/hc`** — Players can now use `/hc` as a short alias for `/herecroppy`.
 
 ## Recent Changes (v1.2.2)
 
@@ -83,16 +89,19 @@ The compiled JAR will be in `build/libs/HereCroppy-1.2.2.jar`.
 - **Fixed XP rewards** — Minecraft experience orbs are now correctly spawned at the harvested block's location.
 - **Improved XP visibility** — Experience orbs are now centered on the block for better visibility.
 
+
 ## Commands
+
+All commands can be run with `/hc` instead of `/herecroppy`.
 
 | Command | Description | Permission |
 |---------|-------------|------------|
-| `/herecroppy start` | Start auto-farming in your selected area | `herecroppy.use` |
-| `/herecroppy stop` | Stop auto-farming | `herecroppy.use` |
-| `/herecroppy restart` | Resume from last block after inventory-full stop | `herecroppy.use` |
-| `/herecroppy clear` | Clear your current selection and setup configuration | `herecroppy.use` |
-| `/herecroppy setup` | Start the setup wizard to configure dump boxes and bonemeal collection | `herecroppy.setup` |
-| `/herecroppy config` | Open the crop configuration UI to enable/disable per-crop settings | `herecroppy.config` |
+| `/herecroppy start` (or `/hc start`) | Start auto-farming in your selected area | `herecroppy.use` |
+| `/herecroppy stop` (or `/hc stop`) | Stop auto-farming | `herecroppy.use` |
+| `/herecroppy restart` (or `/hc restart`) | Resume from last block after inventory-full stop | `herecroppy.use` |
+| `/herecroppy clear` (or `/hc clear`) | Clear your current selection and setup configuration | `herecroppy.use` |
+| `/herecroppy setup` (or `/hc setup`) | Start the setup wizard to configure dump boxes and bonemeal collection | `herecroppy.setup` |
+| `/herecroppy config` (or `/hc config`) | Open the crop configuration UI to enable/disable per-crop settings | `herecroppy.config` |
 
 ## Permissions
 

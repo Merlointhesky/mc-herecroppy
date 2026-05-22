@@ -1,5 +1,5 @@
 name: HereCroppy
-version: '1.1.1'
+version: '1.2.3'
 main: com.herecroppy.herecroppy.HereCroppyPlugin
 description: Auto-farming plugin for Paper servers with advanced configuration
 api-version: '1.21'
@@ -11,6 +11,7 @@ commands:
     description: Main command for HereCroppy auto-farming
     usage: /herecroppy <start|stop|restart|clear|setup|config>
     permission: herecroppy.use
+    aliases: [hc]
 
 permissions:
   herecroppy.use:
