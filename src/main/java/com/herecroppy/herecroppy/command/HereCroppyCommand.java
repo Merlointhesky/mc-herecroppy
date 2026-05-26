@@ -19,6 +19,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.UUID;
 
 public class HereCroppyCommand implements CommandExecutor {
 
@@ -50,113 +51,129 @@ public class HereCroppyCommand implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text("This command can only be used by players!")
-                    .color(NamedTextColor.RED));
-            return true;
-        }
+         if (!(sender instanceof Player player)) {
+             sender.sendMessage(Component.text("This command can only be used by players!")
+                     .color(NamedTextColor.RED));
+             return true;
+         }
 
-        if (args.length < 1) {
-            player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear|setup|config>")
-                    .color(NamedTextColor.YELLOW));
-            return true;
-        }
+         if (args.length < 1) {
+             player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear|setup|config|select>")
+                     .color(NamedTextColor.YELLOW));
+             return true;
+         }
 
-        String subCommand = args[0].toLowerCase();
+         String subCommand = args[0].toLowerCase();
 
-        switch (subCommand) {
-            case "start" -> {
-                if (farmTaskManager.isFarming(player)) {
-                    player.sendMessage(Component.text("Auto-farming is already enabled!")
-                            .color(NamedTextColor.YELLOW));
-                    return true;
-                }
+         switch (subCommand) {
+             case "start" -> {
+                 if (farmTaskManager.isFarming(player)) {
+                     player.sendMessage(Component.text("Auto-farming is already enabled!")
+                             .color(NamedTextColor.YELLOW));
+                     return true;
+                 }
 
-                if (!selectionManager.hasCompleteSelection(player.getUniqueId())) {
-                    player.sendMessage(Component.text("You must set two points first! Shift-right-click with a hoe to set Point A and Point B.")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
+                 if (!selectionManager.hasCompleteSelection(player.getUniqueId())) {
+                     selectionManager.setSelectionMode(player.getUniqueId(), true);
+                     player.sendMessage(Component.text("You must set two points first! Selection Mode has been automatically enabled.")
+                             .color(NamedTextColor.YELLOW)
+                             .append(Component.text("\nShift-right-click with a hoe to set Point A and Point B.").color(NamedTextColor.GREEN)));
+                     return true;
+                 }
 
-                if (!scanManager.hasScan(player.getUniqueId())) {
-                    player.sendMessage(Component.text("Scanning area... Please wait.")
-                            .color(NamedTextColor.GREEN));
-                    scanManager.scanAreaAsync(player.getUniqueId(),
-                            selectionManager.getPointA(player.getUniqueId()),
-                            selectionManager.getPointB(player.getUniqueId()),
-                            result -> startFarming(player, result));
-                    return true;
-                }
+                 if (!scanManager.hasScan(player.getUniqueId())) {
+                     player.sendMessage(Component.text("Scanning area... Please wait.")
+                             .color(NamedTextColor.GREEN));
+                     scanManager.scanAreaAsync(player.getUniqueId(),
+                             selectionManager.getPointA(player.getUniqueId()),
+                             selectionManager.getPointB(player.getUniqueId()),
+                             result -> startFarming(player, result));
+                     return true;
+                 }
 
-                ScanResult scanResult = scanManager.getScanResult(player.getUniqueId());
-                startFarming(player, scanResult);
-            }
-            case "stop" -> {
-                if (!farmTaskManager.isFarming(player)) {
-                    player.sendMessage(Component.text("Auto-farming is not enabled!")
-                            .color(NamedTextColor.YELLOW));
-                } else {
-                    farmTaskManager.stopTask(player);
-                    player.sendMessage(Component.text("Auto-farming disabled.")
-                            .color(NamedTextColor.GREEN));
-                }
-            }
-            case "restart" -> {
-                if (!farmTaskManager.hasLastStop(player)) {
-                    player.sendMessage(Component.text("No paused session to restart. Use /herecroppy start instead.")
-                            .color(NamedTextColor.YELLOW));
-                    return true;
-                }
+                 ScanResult scanResult = scanManager.getScanResult(player.getUniqueId());
+                 startFarming(player, scanResult);
+             }
+             case "stop" -> {
+                 if (!farmTaskManager.isFarming(player)) {
+                     player.sendMessage(Component.text("Auto-farming is not enabled!")
+                             .color(NamedTextColor.YELLOW));
+                 } else {
+                     farmTaskManager.stopTask(player);
+                     player.sendMessage(Component.text("Auto-farming disabled.")
+                             .color(NamedTextColor.GREEN));
+                 }
+             }
+             case "restart" -> {
+                 if (!farmTaskManager.hasLastStop(player)) {
+                     player.sendMessage(Component.text("No paused session to restart. Use /herecroppy start instead.")
+                             .color(NamedTextColor.YELLOW));
+                     return true;
+                 }
 
-                if (!selectionManager.hasCompleteSelection(player.getUniqueId())) {
-                    player.sendMessage(Component.text("Selection missing! Please reselect the area.")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
+                 if (!selectionManager.hasCompleteSelection(player.getUniqueId())) {
+                     selectionManager.setSelectionMode(player.getUniqueId(), true);
+                     player.sendMessage(Component.text("Selection missing! Selection Mode has been automatically enabled.")
+                             .color(NamedTextColor.YELLOW)
+                             .append(Component.text("\nShift-right-click with a hoe to set Point A and Point B.").color(NamedTextColor.GREEN)));
+                     return true;
+                 }
 
-                if (!scanManager.hasScan(player.getUniqueId())) {
-                    player.sendMessage(Component.text("Scanning area... Please wait.")
-                            .color(NamedTextColor.GREEN));
-                    scanManager.scanAreaAsync(player.getUniqueId(),
-                            selectionManager.getPointA(player.getUniqueId()),
-                            selectionManager.getPointB(player.getUniqueId()),
-                            result -> restartFarming(player, result));
-                    return true;
-                }
+                 if (!scanManager.hasScan(player.getUniqueId())) {
+                     player.sendMessage(Component.text("Scanning area... Please wait.")
+                             .color(NamedTextColor.GREEN));
+                     scanManager.scanAreaAsync(player.getUniqueId(),
+                             selectionManager.getPointA(player.getUniqueId()),
+                             selectionManager.getPointB(player.getUniqueId()),
+                             result -> restartFarming(player, result));
+                     return true;
+                 }
 
-                ScanResult scanResult = scanManager.getScanResult(player.getUniqueId());
-                restartFarming(player, scanResult);
-            }
-            case "clear" -> {
-                selectionManager.clearSelection(player.getUniqueId());
-                scanManager.clearScan(player.getUniqueId());
-                farmTaskManager.clearLastStop(player);
-                HereCroppyPlugin.getInstance().getSetupManager().clearSetupConfig(player.getUniqueId());
-                player.sendMessage(Component.text("Selection and setup configuration cleared.")
-                        .color(NamedTextColor.GREEN));
-            }
-            case "setup" -> {
-                if (setupWizardCommand != null) {
-                    setupWizardCommand.onCommand(player, command, label, args);
-                } else {
-                    player.sendMessage(Component.text("Setup wizard is not available.")
-                            .color(NamedTextColor.RED));
-                }
-            }
-            case "config" -> {
-                if (cropConfigUI != null) {
-                    cropConfigUI.openCategoryMenu(player);
-                } else {
-                    player.sendMessage(Component.text("Crop configuration is not available.")
-                            .color(NamedTextColor.RED));
-                }
-            }
-            default -> player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear|setup|config>")
-                    .color(NamedTextColor.YELLOW));
-        }
+                 ScanResult scanResult = scanManager.getScanResult(player.getUniqueId());
+                 restartFarming(player, scanResult);
+             }
+             case "clear" -> {
+                 selectionManager.clearSelection(player.getUniqueId());
+                 scanManager.clearScan(player.getUniqueId());
+                 farmTaskManager.clearLastStop(player);
+                 HereCroppyPlugin.getInstance().getSetupManager().clearSetupConfig(player.getUniqueId());
+                 player.sendMessage(Component.text("Selection and setup configuration cleared.")
+                         .color(NamedTextColor.GREEN));
+             }
+             case "setup" -> {
+                 if (setupWizardCommand != null) {
+                     setupWizardCommand.onCommand(player, command, label, args);
+                 } else {
+                     player.sendMessage(Component.text("Setup wizard is not available.")
+                             .color(NamedTextColor.RED));
+                 }
+             }
+             case "config" -> {
+                 if (cropConfigUI != null) {
+                     cropConfigUI.openCategoryMenu(player);
+                 } else {
+                     player.sendMessage(Component.text("Crop configuration is not available.")
+                             .color(NamedTextColor.RED));
+                 }
+             }
+             case "select" -> {
+                 UUID uuid = player.getUniqueId();
+                 boolean currentMode = selectionManager.isSelectionMode(uuid);
+                 selectionManager.setSelectionMode(uuid, !currentMode);
+                 if (!currentMode) {
+                     player.sendMessage(Component.text("Selection Mode ENABLED! Hold a Hoe and Shift-Right-Click two blocks to set Point A and Point B.")
+                             .color(NamedTextColor.GREEN));
+                 } else {
+                     player.sendMessage(Component.text("Selection Mode DISABLED.")
+                             .color(NamedTextColor.YELLOW));
+                 }
+             }
+             default -> player.sendMessage(Component.text("Usage: /herecroppy <start|stop|restart|clear|setup|config|select>")
+                     .color(NamedTextColor.YELLOW));
+         }
 
-        return true;
-    }
+         return true;
+     }
 
     private void startFarming(Player player, ScanResult scanResult) {
         List<Location> path = PathGenerator.generateSafePath(scanResult);
