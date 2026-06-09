@@ -3,6 +3,8 @@ package com.herecroppy.herecroppy.command;
 import com.herecroppy.herecroppy.HereCroppyPlugin;
 import com.herecroppy.herecroppy.auraskills.AuraSkillsHelper;
 import com.herecroppy.herecroppy.config.CropConfigUI;
+import com.herecroppy.herecroppy.command.SetupWizardCommand;
+import com.herecroppy.herecroppy.hereroleplay.HereRolePlayHelper;
 import com.herecroppy.herecroppy.map.ScanManager;
 import com.herecroppy.herecroppy.map.ScanResult;
 import com.herecroppy.herecroppy.path.PathGenerator;
@@ -26,23 +28,16 @@ public class HereCroppyCommand implements CommandExecutor {
     private final SelectionManager selectionManager;
     private final FarmTaskManager farmTaskManager;
     private final AuraSkillsHelper auraSkillsHelper;
+    private final HereRolePlayHelper hereRolePlayHelper;
     private final ScanManager scanManager;
     private final SetupWizardCommand setupWizardCommand;
     private final CropConfigUI cropConfigUI;
 
-    public HereCroppyCommand(SelectionManager selectionManager, FarmTaskManager farmTaskManager, AuraSkillsHelper auraSkillsHelper, ScanManager scanManager) {
+    public HereCroppyCommand(SelectionManager selectionManager, FarmTaskManager farmTaskManager, AuraSkillsHelper auraSkillsHelper, HereRolePlayHelper hereRolePlayHelper, ScanManager scanManager, SetupWizardCommand setupWizardCommand, CropConfigUI cropConfigUI) {
         this.selectionManager = selectionManager;
         this.farmTaskManager = farmTaskManager;
         this.auraSkillsHelper = auraSkillsHelper;
-        this.scanManager = scanManager;
-        this.setupWizardCommand = null;
-        this.cropConfigUI = null;
-    }
-
-    public HereCroppyCommand(SelectionManager selectionManager, FarmTaskManager farmTaskManager, AuraSkillsHelper auraSkillsHelper, ScanManager scanManager, SetupWizardCommand setupWizardCommand, CropConfigUI cropConfigUI) {
-        this.selectionManager = selectionManager;
-        this.farmTaskManager = farmTaskManager;
-        this.auraSkillsHelper = auraSkillsHelper;
+        this.hereRolePlayHelper = hereRolePlayHelper;
         this.scanManager = scanManager;
         this.setupWizardCommand = setupWizardCommand;
         this.cropConfigUI = cropConfigUI;
@@ -184,7 +179,7 @@ public class HereCroppyCommand implements CommandExecutor {
             return;
         }
 
-        FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
+        FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, hereRolePlayHelper, scanManager, selectionManager, scanResult);
         int startIndex = PathGenerator.findClosestIndex(path, scanResult.getPointB());
         task.setCurrentIndex(startIndex);
         farmTaskManager.startTask(player, task);
@@ -208,7 +203,7 @@ public class HereCroppyCommand implements CommandExecutor {
         }
 
         int lastIndex = farmTaskManager.getLastStopIndex(player);
-        FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, scanManager, selectionManager, scanResult);
+        FarmTask task = new FarmTask(HereCroppyPlugin.getInstance(), player, path, auraSkillsHelper, hereRolePlayHelper, scanManager, selectionManager, scanResult);
         if (lastIndex >= 0 && lastIndex < path.size()) {
             task.setCurrentIndex(lastIndex);
         }

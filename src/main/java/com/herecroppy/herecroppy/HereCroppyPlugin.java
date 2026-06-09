@@ -1,6 +1,7 @@
 package com.herecroppy.herecroppy;
 
 import com.herecroppy.herecroppy.auraskills.AuraSkillsHelper;
+import com.herecroppy.herecroppy.hereroleplay.HereRolePlayHelper;
 import com.herecroppy.herecroppy.command.HereCroppyCommand;
 import com.herecroppy.herecroppy.command.SetupWizardCommand;
 import com.herecroppy.herecroppy.command.CropConfigCommand;
@@ -22,6 +23,7 @@ public final class HereCroppyPlugin extends JavaPlugin {
     private SelectionManager selectionManager;
     private final FarmTaskManager farmTaskManager = new FarmTaskManager();
     private final AuraSkillsHelper auraSkillsHelper = new AuraSkillsHelper();
+    private final HereRolePlayHelper hereRolePlayHelper = new HereRolePlayHelper();
     private ScanManager scanManager;
     private SetupManager setupManager;
     private CropConfigManager cropConfigManager;
@@ -40,12 +42,13 @@ public final class HereCroppyPlugin extends JavaPlugin {
         this.cropConfigUI = new CropConfigUI(cropConfigManager);
         
         auraSkillsHelper.init();
+        hereRolePlayHelper.init();
         
         // Create setup wizard command
         setupWizardCommand = new SetupWizardCommand(setupManager, this);
         
         // Register main command with all subcommands
-        getCommand("herecroppy").setExecutor(new HereCroppyCommand(selectionManager, farmTaskManager, auraSkillsHelper, scanManager, setupWizardCommand, cropConfigUI));
+        getCommand("herecroppy").setExecutor(new HereCroppyCommand(selectionManager, farmTaskManager, auraSkillsHelper, hereRolePlayHelper, scanManager, setupWizardCommand, cropConfigUI));
         
         // Register listeners
         getServer().getPluginManager().registerEvents(new FarmListener(selectionManager, farmTaskManager, scanManager, setupManager, cropConfigManager), this);
@@ -84,6 +87,10 @@ public final class HereCroppyPlugin extends JavaPlugin {
 
     public AuraSkillsHelper getAuraSkillsHelper() {
         return auraSkillsHelper;
+    }
+
+    public HereRolePlayHelper getHereRolePlayHelper() {
+        return hereRolePlayHelper;
     }
 
     public SetupManager getSetupManager() {

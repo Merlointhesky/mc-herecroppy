@@ -2,6 +2,7 @@ package com.herecroppy.herecroppy.task;
 
 import com.herecroppy.herecroppy.HereCroppyPlugin;
 import com.herecroppy.herecroppy.auraskills.AuraSkillsHelper;
+import com.herecroppy.herecroppy.hereroleplay.HereRolePlayHelper;
 import com.herecroppy.herecroppy.config.CropConfigManager;
 import com.herecroppy.herecroppy.map.ScanManager;
 import com.herecroppy.herecroppy.map.ScanResult;
@@ -56,6 +57,7 @@ public class FarmTask extends BukkitRunnable {
     private final Player player;
     private final List<Location> path;
     private final AuraSkillsHelper auraSkillsHelper;
+    private final HereRolePlayHelper hereRolePlayHelper;
     private final ScanManager scanManager;
     private final SelectionManager selectionManager;
     private final SetupManager setupManager;
@@ -81,13 +83,14 @@ public class FarmTask extends BukkitRunnable {
     private int inventoryEmptyCount = 0;
     private int bonemealUsedCount = 0;
 
-    public FarmTask(HereCroppyPlugin plugin, Player player, List<Location> path,
-                    AuraSkillsHelper auraSkillsHelper, ScanManager scanManager,
+    public FarmTask(HereCroppyPlugin plugin, Player player, List<Location> path, 
+                    AuraSkillsHelper auraSkillsHelper, HereRolePlayHelper hereRolePlayHelper, ScanManager scanManager, 
                     SelectionManager selectionManager, ScanResult scanResult) {
         this.plugin = plugin;
         this.player = player;
         this.path = path;
         this.auraSkillsHelper = auraSkillsHelper;
+        this.hereRolePlayHelper = hereRolePlayHelper;
         this.scanManager = scanManager;
         this.selectionManager = selectionManager;
         this.setupManager = plugin.getSetupManager();
@@ -403,9 +406,14 @@ public class FarmTask extends BukkitRunnable {
         }
     }
 
-    private void awardExperience(Material cropType, Location location) {
-        double auraXp = CROP_XP_MAP.getOrDefault(cropType, BASE_HARVEST_XP);
+    private void awardExperience(Material material, Location location) {
+        double auraXp = CROP_XP_MAP.getOrDefault(material, BASE_HARVEST_XP);
         auraSkillsHelper.addFarmingXp(player, auraXp);
+        
+        // Grant HereRolePlay Collect XP
+        if (hereRolePlayHelper.isAvailable()) {
+            hereRolePlayHelper.addCollectXp(player, auraXp);
+        }
         
         // Award a small amount of Minecraft XP to support Mending and standard leveling
         int mcXp = (int) (auraXp / 5.0); // 2 XP for 10 AuraXp, etc.
