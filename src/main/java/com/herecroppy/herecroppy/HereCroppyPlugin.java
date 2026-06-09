@@ -22,7 +22,7 @@ public final class HereCroppyPlugin extends JavaPlugin {
     private static HereCroppyPlugin instance;
     private SelectionManager selectionManager;
     private final FarmTaskManager farmTaskManager = new FarmTaskManager();
-    private final AuraSkillsHelper auraSkillsHelper = new AuraSkillsHelper();
+    private AuraSkillsHelper auraSkillsHelper = null;
     private final HereRolePlayHelper hereRolePlayHelper = new HereRolePlayHelper();
     private ScanManager scanManager;
     private SetupManager setupManager;
@@ -41,7 +41,10 @@ public final class HereCroppyPlugin extends JavaPlugin {
         this.cropConfigManager = new CropConfigManager(this);
         this.cropConfigUI = new CropConfigUI(cropConfigManager);
         
-        auraSkillsHelper.init();
+        if (getServer().getPluginManager().getPlugin("AuraSkills") != null) {
+            auraSkillsHelper = new AuraSkillsHelper();
+            auraSkillsHelper.init();
+        }
         hereRolePlayHelper.init();
         
         // Create setup wizard command

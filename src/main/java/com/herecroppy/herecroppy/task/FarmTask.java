@@ -252,7 +252,7 @@ public class FarmTask extends BukkitRunnable {
         } else {
             // Move toward target using velocity
             Vector direction = new Vector(dx, 0, dz).normalize();
-            double speedMultiplier = 1.0 + (auraSkillsHelper.getFarmingLevel(player) * 0.01);
+            double speedMultiplier = 1.0 + ((auraSkillsHelper != null ? auraSkillsHelper.getFarmingLevel(player) : 0) * 0.01);
             Vector velocity = direction.multiply(SPEED * speedMultiplier);
             velocity.setY(0);
             player.setVelocity(velocity);
@@ -408,7 +408,9 @@ public class FarmTask extends BukkitRunnable {
 
     private void awardExperience(Material material, Location location) {
         double auraXp = CROP_XP_MAP.getOrDefault(material, BASE_HARVEST_XP);
-        auraSkillsHelper.addFarmingXp(player, auraXp);
+        if (auraSkillsHelper != null) {
+            auraSkillsHelper.addFarmingXp(player, auraXp);
+        }
         
         // Grant HereRolePlay Collect XP
         if (hereRolePlayHelper.isAvailable()) {
@@ -641,7 +643,7 @@ public class FarmTask extends BukkitRunnable {
     }
 
     private int calculateDropMultiplier() {
-        double fortuneBonus = auraSkillsHelper.getFarmingFortune(player);
+        double fortuneBonus = auraSkillsHelper != null ? auraSkillsHelper.getFarmingFortune(player) : 0.0;
         double chance = fortuneBonus * 0.01; // 1% per fortune point
         if (random.nextDouble() < chance) {
             return 2;
