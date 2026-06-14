@@ -1,5 +1,5 @@
 name: HereCroppy
-version: '1.1.0'
+version: '${version}'
 main: com.herecroppy.herecroppy.HereCroppyPlugin
 description: Auto-farming plugin for Paper servers with advanced configuration
 api-version: '1.21'

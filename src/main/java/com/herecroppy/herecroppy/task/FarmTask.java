@@ -19,6 +19,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.Openable;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -26,6 +28,7 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -412,9 +415,10 @@ public class FarmTask extends BukkitRunnable {
             auraSkillsHelper.addFarmingXp(player, auraXp);
         }
         
-        // Grant HereRolePlay Collect XP
+        // Grant HereRolePlay Collect XP (aligned to manual harvesting XP)
         if (hereRolePlayHelper.isAvailable()) {
-            hereRolePlayHelper.addCollectXp(player, auraXp);
+            double hrpXp = getHrpCropXp(material);
+            hereRolePlayHelper.addCollectXp(player, hrpXp);
         }
         
         // Award a small amount of Minecraft XP to support Mending and standard leveling
@@ -424,6 +428,72 @@ public class FarmTask extends BukkitRunnable {
                 orb.setExperience(mcXp);
             });
         }
+    }
+
+    private double getHrpCropXp(Material material) {
+        if (material == Material.WHEAT || material == Material.CARROTS || material == Material.POTATOES || 
+            material == Material.BEETROOTS || material == Material.COCOA || material == Material.SWEET_BERRY_BUSH ||
+            material == Material.SUGAR_CANE || material == Material.CACTUS || material == Material.BAMBOO) {
+            return 0.5;
+        } else if (material == Material.NETHER_WART || material == Material.MELON || material == Material.PUMPKIN) {
+            return 0.75;
+        } else if (material == Material.TORCHFLOWER_CROP || material == Material.PITCHER_CROP) {
+            return 1.0;
+        }
+        return 0.5;
+    }
+
+    private int applySharedMendingRepair(int xp) {
+        if (xp <= 0) return 0;
+        int remainingXp = xp;
+        while (remainingXp > 0) {
+            List<ItemStack> eligible = new ArrayList<>();
+            ItemStack mainHand = player.getInventory().getItemInMainHand();
+            if (isMendableAndDamaged(mainHand)) eligible.add(mainHand);
+            ItemStack offHand = player.getInventory().getItemInOffHand();
+            if (isMendableAndDamaged(offHand)) eligible.add(offHand);
+            ItemStack helmet = player.getInventory().getHelmet();
+            if (isMendableAndDamaged(helmet)) eligible.add(helmet);
+            ItemStack chest = player.getInventory().getChestplate();
+            if (isMendableAndDamaged(chest)) eligible.add(chest);
+            ItemStack leggings = player.getInventory().getLeggings();
+            if (isMendableAndDamaged(leggings)) eligible.add(leggings);
+            ItemStack boots = player.getInventory().getBoots();
+            if (isMendableAndDamaged(boots)) eligible.add(boots);
+
+            if (eligible.isEmpty()) {
+                break;
+            }
+
+            ItemStack toRepair = eligible.get(random.nextInt(eligible.size()));
+            if (toRepair.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable dmg) {
+                int damage = dmg.getDamage();
+                int xpToUse = Math.min(remainingXp, (int) Math.ceil(damage / 2.0));
+                int repairAmount = Math.min(damage, xpToUse * 2);
+                
+                dmg.setDamage(damage - repairAmount);
+                toRepair.setItemMeta(dmg);
+                player.updateInventory();
+                remainingXp -= xpToUse;
+            } else {
+                break;
+            }
+        }
+        return remainingXp;
+    }
+
+    private boolean isMendableAndDamaged(ItemStack item) {
+        if (item == null || item.getAmount() <= 0) return false;
+        if (item.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.MENDING) <= 0) {
+            org.bukkit.enchantments.Enchantment mending = org.bukkit.Registry.ENCHANTMENT.get(org.bukkit.NamespacedKey.minecraft("mending"));
+            if (mending == null || item.getEnchantmentLevel(mending) <= 0) {
+                return false;
+            }
+        }
+        if (item.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable dmg) {
+            return dmg.getDamage() > 0;
+        }
+        return false;
     }
 
     private boolean processCurrentBlock(Location loc) {
@@ -558,8 +628,8 @@ public class FarmTask extends BukkitRunnable {
         // Apply fortune/double drops
         int dropMultiplier = calculateDropMultiplier();
 
-        // Break and collect drops immediately
-        ItemStack tool = new ItemStack(Material.IRON_HOE);
+        // Break and collect drops immediately (respecting tool enchants)
+        ItemStack tool = player.getInventory().getItemInMainHand();
         cropBlock.breakNaturally(tool);
         collectDroppedItems(cropBlock.getLocation());
 
@@ -728,7 +798,7 @@ public class FarmTask extends BukkitRunnable {
         Block toBreak = current.getWorld().getBlockAt(current.getX(), current.getY() + 1, current.getZ());
         
         while (toBreak.getType() == Material.SUGAR_CANE) {
-            ItemStack tool = new ItemStack(Material.IRON_HOE);
+            ItemStack tool = player.getInventory().getItemInMainHand();
             toBreak.breakNaturally(tool);
             collectDroppedItems(toBreak.getLocation());
             
@@ -1157,6 +1227,14 @@ public class FarmTask extends BukkitRunnable {
                     // Remove the item entity from the world
                     itemEntity.remove();
                 }
+            } else if (entity instanceof ExperienceOrb orb) {
+                int xp = orb.getExperience();
+                int leftoverXp = applySharedMendingRepair(xp);
+                if (leftoverXp > 0) {
+                    player.giveExp(leftoverXp);
+                }
+                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.4f, 1.2f);
+                orb.remove();
             }
         });
     }
