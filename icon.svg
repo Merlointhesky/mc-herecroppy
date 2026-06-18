@@ -26,7 +26,7 @@
      showgrid="false"
      inkscape:zoom="0.80087682"
      inkscape:cx="397.06481"
-     inkscape:cy="561.25985"
+     inkscape:cy="604.96195"
      inkscape:window-width="3440"
      inkscape:window-height="1369"
      inkscape:window-x="1072"
@@ -50,65 +50,108 @@
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient7789"
-       id="linearGradient7793"
-       x1="-228.72572"
-       y1="131.89816"
-       x2="-125.63092"
-       y2="131.89816"
+       id="linearGradient7793-3"
+       x1="-216.69411"
+       y1="74.939438"
+       x2="-215.40524"
+       y2="161.96954"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(282.28009,8.8445219)" />
+       gradientTransform="matrix(0.43065946,0,0,0.43065945,131.3464,62.791075)" />
   </defs>
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
     <rect
-       style="fill:#a55500;stroke-width:0.497639;stroke-linejoin:round;fill-opacity:1"
-       id="rect7284"
+       style="fill:#f8f9fa;fill-opacity:1;stroke:none;stroke-width:9.498;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3279"
        width="180"
        height="180"
-       x="16.518356"
-       y="30.724142"
+       x="6.4671855"
+       y="6.7975512"
+       ry="27.943546"
+       inkscape:export-filename="D:\Development\Java\Minecraft Mods\HereCroppy\icon.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+    <image
+       width="180"
+       height="122.89157"
+       preserveAspectRatio="none"
+       xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPkAAACqCAYAAABvVenJAAAABHNCSVQICAgIfAhkiAAABCNJREFU
+eJzt3TFrlXcYxuFEWodQLTgUgqF0SgjStWKHIFhwk46Z8gHayVEHBwcdnewH6NSxH6CF0kHRVaQk
+kwQl4NDBgCRxiLME5Ma8x/ec+1zX/GBekB//5eE5iweHR8cLQK0zY38AMFkih3Iih3JfjP0BzJ6H
+d65Fc7/e/XvCX0LCSw7lRA7lRA7lRA7lRA7lRA7lRA7lRA7lRA7lbLzNga3NjWhuffldNLd26btT
+fM1JNugmy0sO5UQO5UQO5UQO5UQO5UQO5UQO5UQO5UQO5RbdXZ8+6Yba73/8G83dv3klmks32fZ2
+X0dzb/bfRnO3HjyO5oY2L5t2XnIoJ3IoJ3IoJ3IoJ3IoJ3IoJ3IoJ3IoJ3Io58bbDEs32c6fW4rm
+1lbORnN7u9FYvEE31kberG+ypbzkUE7kUE7kUE7kUE7kUE7kUE7kUE7kUE7kUM7G2xRKf1003WS7
++uNKNPfPo5fR3PK330Rz6eaZTbbJ8pJDOZFDOZFDOZFDOZFDOZFDOZFDOZFDOZFDORtvU2joDbCv
+l746xdecNPgtuIH/vfTXSp/sZJuF6a/HTisvOZQTOZQTOZQTOZQTOZQTOZQTOZQTOZQTOZSz8TbD
+0tttqfR2W3oLbujbcql52WRLecmhnMihnMihnMihnMihnMihnMihnMihnMihnI23z+j+zSvRXHrj
+Lb3d9nTn/+zvDnxrLZVu2qXW919Ec1ubG9HcrG/GecmhnMihnMihnMihnMihnMihnMihnMihnMih
+nI23zyjdZEs3z1I/rF6I5tLNuKFvt73ZfxvN/bf3ZTS3sJDNzfomW8pLDuVEDuVEDuVEDuVEDuVE
+DuVEDuVEDuVEDuUWDw6Pjsf+iFmX3m5LN7bu/fL9aT7nhHSTbW/3dTQ3/IZaZl421IbmJYdyIody
+IodyIodyIodyIodyIodyIodyIodybrx9xNCbbOvL76K52789i+Z+/uliNLf9/EU0N/QNtcur2Vy6
+Qcen8ZJDOZFDOZFDOZFDOZFDOZFDOZFDOZFDOZFDuaobb1ubG9Fcunl24/pqNLf98iia+/OvV9Hc
+WIa+oZb+fwzNLbgPecmhnMihnMihnMihnMihnMihnMihnMihnMihXNWNt7E22dZWzkZzQ5v2za5p
+/7554SWHciKHciKHciKHciKHciKHciKHciKHciKHclUbb+fPLUVz6SZb+mug28+jsYX010BtijEk
+LzmUEzmUEzmUEzmUEzmUEzmUEzmUEzmUEzmUq9p4S+W/LpptqKW35WAMXnIoJ3IoJ3IoJ3IoJ3Io
+J3IoJ3IoJ3IoJ3IoV7Xx9mQn2zwb+oba1ubGKH8XEl5yKCdyKCdyKCdyKCdyKCdyKCdyKCdyKCdy
+KLd4cHh0PPZHAJPjJYdyIodyIodyIodyIody7wFov7z6UWlT5wAAAABJRU5ErkJggg==
+"
+       id="image5801"
+       x="6.4671855"
+       y="20.555874"
+       inkscape:export-filename="D:\Development\Java\Minecraft Mods\HereCroppy\icon.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#cdb159;stroke-width:9.498;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect7284-0"
+       width="180"
+       height="180"
+       x="6.4671855"
+       y="6.7975512"
        ry="27.943546"
        inkscape:export-filename="D:\Development\Java\Minecraft Mods\HereCroppy\icon.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96" />
     <path
-       id="rect7366"
-       style="fill:#fffeff;fill-opacity:0.4375;stroke-width:0.43234;stroke-linejoin:round"
-       d="m 53.381886,104.5473 c -15.480728,0 -27.943518,9.40671 -27.943518,21.09129 v 31.23558 H 158.99402 c 15.48074,0 27.94352,-9.4067 27.94352,-21.09129 v -30.00655 c -2.94756,-0.79396 -6.12505,-1.22903 -9.44282,-1.22903 z"
+       id="rect7366-0"
+       style="fill:#00aa00;fill-opacity:0.11413;stroke:none;stroke-width:0.43234;stroke-linejoin:round;stroke-opacity:1"
+       d="m 44.655076,14.939102 c -15.48072,0 -27.94351,9.40671 -27.94351,21.09129 v 31.23558 H 150.26724 c 15.48074,0 27.65024,-7.75855 27.94352,-21.09129 v -13.15783 c 0,0 -2.16065,-14.11335 -19.6842,-18.07775 z"
        inkscape:export-filename="D:\Development\Java\Minecraft Mods\HereCroppy\icon.png"
        inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-ydpi="96"
+       sodipodi:nodetypes="sscscccs" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:163.673px;line-height:1.25;font-family:sans-serif;fill:url(#linearGradient7793);fill-opacity:1;stroke:none;stroke-width:4.09184"
-       x="50.517456"
-       y="195.28703"
-       id="text2436"
-       transform="scale(1.0708721,0.93381835)"
+       style="font-style:normal;font-weight:normal;font-size:70.4874px;line-height:1.25;font-family:sans-serif;fill:url(#linearGradient7793-3);fill-opacity:1;stroke:none;stroke-width:1.76218"
+       x="31.535624"
+       y="143.08437"
+       id="text2436-4"
+       transform="scale(0.79886772,1.2517717)"
        inkscape:export-filename="D:\Development\Java\Minecraft Mods\HereCroppy\icon.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96"><tspan
          sodipodi:role="line"
-         id="tspan2434"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Eras Bold ITC';-inkscape-font-specification:'Eras Bold ITC';fill:url(#linearGradient7793);fill-opacity:1;stroke-width:4.09184"
-         x="50.517456"
-         y="195.28703">H</tspan></text>
+         id="tspan2434-7"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Eras Bold ITC';-inkscape-font-specification:'Eras Bold ITC';fill:url(#linearGradient7793-3);fill-opacity:1;stroke-width:1.76218"
+         x="31.535624"
+         y="143.08437">HC</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:163.673px;line-height:1.25;font-family:sans-serif;fill:#00ff55;fill-opacity:1;stroke:none;stroke-width:4.09184"
-       x="27.99674"
-       y="191.04166"
-       id="text7206"
-       transform="scale(1.0708721,0.93381834)"
+       style="font-style:normal;font-weight:normal;font-size:70.4874px;line-height:1.25;font-family:sans-serif;fill:#00ff55;fill-opacity:1;stroke:none;stroke-width:1.76218"
+       x="24.073984"
+       y="139.65768"
+       id="text7206-5"
+       transform="scale(0.79886772,1.2517717)"
        inkscape:export-filename="D:\Development\Java\Minecraft Mods\HereCroppy\icon.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96"><tspan
          sodipodi:role="line"
-         id="tspan7204"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Eras Bold ITC';-inkscape-font-specification:'Eras Bold ITC';fill:#00ff55;stroke-width:4.09184;fill-opacity:1"
-         x="27.99674"
-         y="191.04166">H</tspan></text>
+         id="tspan7204-7"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Eras Bold ITC';-inkscape-font-specification:'Eras Bold ITC';fill:#00ff55;fill-opacity:1;stroke-width:1.76218"
+         x="24.073984"
+         y="139.65768">HC</tspan></text>
   </g>
 </svg>

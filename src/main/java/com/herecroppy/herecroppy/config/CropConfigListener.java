@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 
 public class CropConfigListener implements Listener {
@@ -210,5 +211,14 @@ public class CropConfigListener implements Listener {
     		case MELON -> "Watermelons";
     		default -> cropType.name();
     	};
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        Component titleComponent = event.getView().title();
+        String titleStr = PlainTextComponentSerializer.plainText().serialize(titleComponent);
+        if (titleStr.contains("HereCroppy")) {
+            event.setCancelled(true);
+        }
     }
 }

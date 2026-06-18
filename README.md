@@ -38,6 +38,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
    - **Bonus AuraSkills XP** — AuraSkills Farming XP gains are boosted based on farming level.
    - **Fortune drops** — Chance for double crop drops based on farming level.
    - **Faster farming** — Slightly increased movement speed between crops based on farming level.
+- **HereRolePlay integration** — When HereRolePlay is installed, automatically awards Collect experience points directly to the player for each crop harvested, matching manual harvesting XP.
 
 ## Supported Crops
 
@@ -75,9 +76,9 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.2.3.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.2.5.jar`.
 
-## Recent Changes (v1.2.3)
+## Recent Changes (v1.2.5)
 
 - **Fixed Off-hand Bonemeal Consumption** — Bonemeal in the player's off-hand (or main hand/hotbar slots) is now robustly detected and subtracted upon application to crops, fixing a bug where bonemeal could be used infinitely without being consumed.
 - **Robust Crop Age Verification** — Bonemeal is only consumed when successfully applied to crops that are actually eligible for growth (i.e. not fully grown).
