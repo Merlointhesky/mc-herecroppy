@@ -20,9 +20,14 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.Openable;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.Sound;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Phantom;
+import org.bukkit.entity.Slime;
+import org.bukkit.entity.Spider;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -145,9 +150,23 @@ public class FarmTask extends BukkitRunnable {
     }
 
     @Override
+    public synchronized void cancel() throws IllegalStateException {
+        plugin.getFarmTaskManager().removeActiveTask(player.getUniqueId());
+        super.cancel();
+        if (player.isOnline() && plugin.isEnabled() && !plugin.getFarmTaskManager().isQuitting(player.getUniqueId())) {
+            plugin.getFarmTaskManager().startAutoDefense(player);
+        }
+    }
+
+    @Override
     public void run() {
         if (!player.isOnline()) {
             cancel();
+            return;
+        }
+
+        if (handleDefense()) {
+            harvestPause = 8;
             return;
         }
 
@@ -1308,4 +1327,99 @@ public class FarmTask extends BukkitRunnable {
         };
     }
 
+    private org.bukkit.entity.LivingEntity findNearbyHostileMob() {
+        double attackRadius = 3.5;
+        Location loc = player.getLocation();
+        org.bukkit.entity.LivingEntity closest = null;
+        double closestDistSq = Double.MAX_VALUE;
+
+        for (org.bukkit.entity.Entity entity : loc.getWorld().getNearbyEntities(loc, attackRadius, attackRadius, attackRadius)) {
+            if (entity instanceof Monster || 
+                entity instanceof Slime || 
+                entity instanceof Phantom ||
+                entity instanceof Spider) {
+                
+                if (entity instanceof org.bukkit.entity.LivingEntity living) {
+                    if (!living.isDead() && player.hasLineOfSight(living)) {
+                        double distSq = loc.distanceSquared(living.getLocation());
+                        if (distSq < closestDistSq) {
+                            closestDistSq = distSq;
+                            closest = living;
+                        }
+                    }
+                }
+            }
+        }
+        return closest;
+    }
+
+    private int findBestWeaponSlot() {
+        int bestSlot = -1;
+        double maxDamage = -1.0;
+
+        for (int i = 0; i < 9; i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (item == null || item.getAmount() == 0) continue;
+
+            String name = item.getType().name();
+            double dmgValue = 0.0;
+
+            if (name.contains("SWORD")) {
+                dmgValue = 100.0;
+            } else if (name.contains("AXE") && !name.contains("PICKAXE")) {
+                dmgValue = 80.0;
+            } else if (name.contains("PICKAXE")) {
+                dmgValue = 60.0;
+            } else if (name.contains("HOE")) {
+                dmgValue = 50.0;
+            } else if (name.contains("SHOVEL")) {
+                dmgValue = 40.0;
+            }
+
+            if (name.startsWith("NETHERITE")) {
+                dmgValue += 5.0;
+            } else if (name.startsWith("DIAMOND")) {
+                dmgValue += 4.0;
+            } else if (name.startsWith("IRON")) {
+                dmgValue += 3.0;
+            } else if (name.startsWith("STONE")) {
+                dmgValue += 2.0;
+            } else if (name.startsWith("GOLD")) {
+                dmgValue += 1.0;
+            }
+
+            if (dmgValue > maxDamage) {
+                maxDamage = dmgValue;
+                bestSlot = i;
+            }
+        }
+
+        return bestSlot;
+    }
+
+    private boolean handleDefense() {
+        org.bukkit.entity.LivingEntity target = findNearbyHostileMob();
+        if (target == null) return false;
+
+        int slot = findBestWeaponSlot();
+        if (slot != -1) {
+            if (player.getInventory().getHeldItemSlot() != slot) {
+                player.getInventory().setHeldItemSlot(slot);
+            }
+        }
+
+        Location targetEye = target.getEyeLocation();
+        Location playerEye = player.getEyeLocation();
+        Vector dir = targetEye.toVector().subtract(playerEye.toVector()).normalize();
+        
+        Location look = player.getLocation();
+        look.setDirection(dir);
+        player.teleport(look);
+
+        player.attack(target);
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0f, 1.0f);
+        player.sendActionBar(Component.text("⚔ Fending off " + target.getName() + "!").color(NamedTextColor.RED));
+
+        return true;
+    }
 }

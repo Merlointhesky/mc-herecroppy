@@ -20,6 +20,7 @@ A [Paper](https://papermc.io) Minecraft plugin for **auto-farming** — automati
 - **Inventory full detection** — Automatically stops when your inventory is full and allows restart.
 - **Activity Summary** — Displays a detailed "table" of farming status (crops collected, seeds, bonemeal used, and inventory dumps) instead of individual messages.
 - **Offline cleanup** — Automatically removes players from auto-farming when they disconnect.
+- **Self-Defense Mechanics** — Automatically detects nearby hostiles, swaps to your best quickbar weapon, and defends itself during active farming runs or while standing guard AFK when paused.
 - **Setup Wizard** — Configure optional dump boxes and bonemeal collection with `/herecroppy setup`:
    - **Dump unwanted crops** — Automatically deposit unwanted crops in a designated box.
    - **Dump keep crops** — Automatically deposit desired crops in a separate storage box (Poisonous Potatoes are always kept).
@@ -76,7 +77,12 @@ The plugin supports the following crops with automatic harvesting and replanting
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/HereCroppy-1.2.5.jar`.
+The compiled JAR will be in `build/libs/HereCroppy-1.3.0.jar`.
+
+## Recent Changes (v1.3.0)
+
+- **Self-Defense Integration** — Ported standard self-defense combat mechanics. The bot can now automatically detect nearby hostiles (within a 3.5-block radius), equip the best available weapon from the hotbar quickslots, face them, and execute sweep attacks to defend itself.
+- **AFK Auto-Defense Guard** — When farming is stopped or paused (e.g. inventory full), the bot activates an Auto-Defense Guard task that keeps defending the player AFK. Deactivates seamlessly on manual movement.
 
 ## Recent Changes (v1.2.5)
 

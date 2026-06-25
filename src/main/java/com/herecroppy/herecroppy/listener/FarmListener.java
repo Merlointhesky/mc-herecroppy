@@ -17,6 +17,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
@@ -112,8 +113,47 @@ public class FarmListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        farmTaskManager.stopTask(player);
+        farmTaskManager.markQuitting(player.getUniqueId());
+        try {
+            farmTaskManager.stopTask(player);
+            farmTaskManager.stopAutoDefense(player, true);
+        } finally {
+            farmTaskManager.removeQuitting(player.getUniqueId());
+        }
         scanManager.clearScan(player.getUniqueId());
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        if (farmTaskManager.hasAutoDefense(player)) {
+            com.herecroppy.herecroppy.task.AutoDefenseTask defenseTask = farmTaskManager.getAutoDefenseTask(player);
+            if (defenseTask != null) {
+                Location expected = defenseTask.getExpectedTeleportLocation();
+
+                // If it's a plugin-driven teleport/rotation, ignore it
+                if (expected != null && expected.getWorld() == event.getTo().getWorld()) {
+                    double distSq = expected.distanceSquared(event.getTo());
+                    // A tiny threshold handles floating-point inaccuracies
+                    if (distSq < 0.05) {
+                        defenseTask.clearExpectedTeleportLocation();
+                        return;
+                    }
+                }
+
+                // Check if they actually moved (e.g. moved X, Y, or Z by > 0.05 blocks)
+                Location from = event.getFrom();
+                Location to = event.getTo();
+                if (from.getWorld() != to.getWorld() || 
+                    Math.abs(from.getX() - to.getX()) > 0.05 || 
+                    Math.abs(from.getY() - to.getY()) > 0.05 || 
+                    Math.abs(from.getZ() - to.getZ()) > 0.05) {
+
+                    // Manual movement detected! Stop auto defense
+                    farmTaskManager.stopAutoDefense(player, false);
+                }
+            }
+        }
     }
 
     private boolean isHoe(Material material) {
